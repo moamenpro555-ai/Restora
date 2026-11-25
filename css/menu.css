@@ -1,0 +1,8 @@
+.hero{height:170px;background:var(--secondary) center/cover;border-radius:0 0 var(--radius) var(--radius);position:relative}
+.rest-head{display:flex;gap:12px;align-items:center;margin-top:-36px;padding:0 16px;position:relative}
+.rest-head img.logo{width:72px;height:72px;border-radius:16px;border:3px solid var(--surface);background:var(--surface);object-fit:cover}
+.catnav{position:sticky;top:0;background:var(--bg);z-index:10;padding:8px 0;display:flex;gap:6px;overflow:auto}
+.catnav a{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 14px;border-radius:99px;white-space:nowrap}
+.mitem{display:flex;gap:10px;cursor:pointer}.mitem img{width:84px;height:84px;object-fit:cover;border-radius:10px;background:var(--surface2)}
+.cart-fab{position:fixed;inset-block-end:16px;inset-inline:16px;max-width:520px;margin-inline:auto;z-index:30;justify-content:space-between;width:calc(100% - 32px);padding:14px 18px;box-shadow:var(--shadow)}
+.steps{display:flex;gap:6px;margin:12px 0}.steps span{flex:1;text-align:center;padding:6px;border-radius:8px;background:var(--surface2);font-size:.8rem}.steps span.on{background:var(--primary);color:#fff}
