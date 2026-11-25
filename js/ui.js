@@ -44,7 +44,42 @@ function confirmBox(msg) {
       h('div', { class: 'row' }, h('button', { class: 'btn danger', onclick: () => { m.close(); res(true); } }, 'تأكيد'), h('button', { class: 'btn secondary', onclick: () => { m.close(); res(false); } }, 'إلغاء'))));
   });
 }
-// fields: {name,label,type(text|number|password|email|date|datetime-local|textarea|select|checkbox|multicheck),options:[{value,label}],required,step,hint}
+// Shrinks a picked image in the browser (max side px, WebP/JPEG) so uploads stay small (< ~380 KB).
+async function compressImage(file, max = 900) {
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error('اختر صورة JPG أو PNG أو WebP');
+  const bmp = await createImageBitmap(file).catch(() => { throw new Error('تعذر قراءة الصورة'); });
+  let side = max;
+  for (let i = 0; i < 5; i++) {
+    const k = Math.min(1, side / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    const blob = await new Promise(r => c.toBlob(r, 'image/webp', 0.85));
+    if (blob && blob.size <= 380 * 1024) return blob;
+    side = Math.round(side * 0.75);
+  }
+  throw new Error('الصورة كبيرة جدًا، اختر صورة أصغر');
+}
+// Device-only image picker. Keeps the uploaded URL in a hidden input (name) and exposes it as .value on the wrapper.
+function imageUploader(name, value) {
+  const isOurs = u => typeof u === 'string' && /\/api\/media\/[a-z0-9]+$/.test(u);
+  const hidden = h('input', { type: 'hidden', name, value: isOurs(value) ? value : '' });
+  const img = h('img', { alt: '', style: 'max-width:140px;max-height:100px;border-radius:8px;object-fit:cover;display:none' });
+  const status = h('small', { class: 'muted' });
+  const show = () => { if (hidden.value) { img.src = hidden.value; img.style.display = 'block'; } else img.style.display = 'none'; rm.style.display = hidden.value ? '' : 'none'; };
+  const file = h('input', { type: 'file', accept: 'image/jpeg,image/png,image/webp', onchange: async e => {
+    const f = e.target.files[0]; if (!f) return;
+    status.textContent = 'جارٍ الرفع...';
+    try { hidden.value = await API.upload(await compressImage(f)); status.textContent = 'تم رفع الصورة'; show(); }
+    catch (err) { status.textContent = ''; fail(err); }
+    file.value = '';
+  } });
+  const rm = h('button', { type: 'button', class: 'btn secondary sm', onclick: () => { hidden.value = ''; status.textContent = ''; show(); } }, 'إزالة الصورة');
+  const wrap = h('div', null, img, file, rm, status, hidden);
+  Object.defineProperty(wrap, 'value', { get: () => hidden.value });
+  show();
+  return wrap;
+}
+// fields: {name,label,type(image|text|number|password|email|date|datetime-local|textarea|select|checkbox|multicheck),options:[{value,label}],required,step,hint}
 function formModal({ title, fields, values = {}, submitText = 'حفظ', onSubmit, wide }) {
   const inputs = {};
   const form = h('form', { class: 'two', onsubmit: async e => {
@@ -64,7 +99,8 @@ function formModal({ title, fields, values = {}, submitText = 'حفظ', onSubmit
   for (const f of fields) {
     const v = values[f.name];
     let el;
-    if (f.type === 'textarea') el = h('textarea', { value: v ?? '' });
+    if (f.type === 'image') el = imageUploader(f.name, v);
+    else if (f.type === 'textarea') el = h('textarea', { value: v ?? '' });
     else if (f.type === 'select') el = h('select', null, f.options.map(o => h('option', { value: o.value, selected: String(o.value) === String(v ?? '') }, o.label)));
     else if (f.type === 'checkbox') el = h('input', { type: 'checkbox', checked: !!v });
     else if (f.type === 'multicheck') el = h('div', null, f.options.map(o => h('label', { style: 'display:block' }, h('input', { type: 'checkbox', value: o.value, checked: (v || []).includes(o.value) }), o.label)));

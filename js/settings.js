@@ -13,7 +13,7 @@
     h('h3', { style: 'grid-column:1/-1' }, 'هوية المطعم'),
     ...[['primary', 'اللون الأساسي'], ['secondary', 'اللون الثانوي'], ['accent', 'لون التمييز']].map(([k, l]) => h('div', null, h('label', null, l), h('input', { name: k, type: 'color', value: b[k], oninput: e => live(k, e.target.value) }))),
     h('div', null, h('label', null, 'الخط'), h('select', { name: 'fontFamily' }, ['Cairo', 'Tajawal'].map(x => h('option', { selected: x === b.fontFamily }, x)))),
-    h('div', null, h('label', null, 'رابط الشعار (https)'), h('input', { name: 'logoUrl', value: b.logoUrl || '' })), h('div', null, h('label', null, 'رابط الغلاف (https)'), h('input', { name: 'coverUrl', value: b.coverUrl || '' })),
+    h('div', null, h('label', null, 'شعار المطعم (من جهازك)'), imageUploader('logoUrl', b.logoUrl)), h('div', null, h('label', null, 'صورة الغلاف (من جهازك)'), imageUploader('coverUrl', b.coverUrl)),
     h('div', null, h('label', null, 'الهاتف'), h('input', { name: 'phone', value: b.phone || '' })), h('div', null, h('label', null, 'العنوان'), h('input', { name: 'address', value: b.address || '' })),
     h('div', null, h('label', null, 'مواعيد العمل (نص)'), h('input', { name: 'hours', value: (b.openingHours && b.openingHours.text) || '' })), h('div', null, h('label', null, 'يفتح (ساعة)'), h('input', { name: 'open', type: 'time', value: (b.openingHours && b.openingHours.open) || '' })), h('div', null, h('label', null, 'يغلق (ساعة) — فارغان = مفتوح دائمًا'), h('input', { name: 'close', type: 'time', value: (b.openingHours && b.openingHours.close) || '' })),
     h('div', null, h('label', null, 'تذييل الإيصال'), h('input', { name: 'receiptFooter', value: b.receiptFooter || '' })),

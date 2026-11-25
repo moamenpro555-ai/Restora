@@ -19,7 +19,7 @@
     formModal({ title: p ? 'تعديل منتج' : 'منتج جديد', wide: true, values: p ? { ...p, options: toText(p.options) } : { isAvailable: true },
       fields: [{ name: 'name', label: 'الاسم', required: true }, { name: 'categoryId', label: 'التصنيف', type: 'select', options: [{ value: '', label: '—' }, ...cats.map(c => ({ value: c.id, label: c.name }))] },
         { name: 'price', label: 'السعر', type: 'number', step: '0.01', required: true }, { name: 'cost', label: 'التكلفة (اختياري، تُحسب من الوصفة)', type: 'number', step: '0.01' },
-        { name: 'imageUrl', label: 'رابط الصورة (https)' }, { name: 'station', label: 'محطة المطبخ', hint: 'مثال: Grill, Drinks, Pizza' },
+        { name: 'imageUrl', label: 'صورة المنتج (من جهازك)', type: 'image' }, { name: 'station', label: 'محطة المطبخ', hint: 'مثال: Grill, Drinks, Pizza' },
         { name: 'description', label: 'الوصف', type: 'textarea' },
         { name: 'options', label: 'الإضافات والخيارات', type: 'textarea', hint: 'سطر لكل مجموعة: الحجم | required | single | صغير:0, كبير:10' },
         { name: 'isAvailable', label: 'متاح للبيع', type: 'checkbox' }],
