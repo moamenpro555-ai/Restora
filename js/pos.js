@@ -74,8 +74,7 @@
         h('div', { class: 'qty' }, h('button', { class: 'ln-note' + (l.notes ? ' has' : ''), title: 'ملاحظة على الصنف', onclick: () => lineNote(l) }, icon(l.notes ? 'edit' : 'plus', 15)), h('button', { onclick: () => { l.qty--; if (l.qty < 1) st.cart.splice(i, 1); drawCart(); } }, '−'), h('span', null, l.qty), h('button', { onclick: () => { l.qty++; drawCart(); } }, '+')))))
         : h('div', { class: 'empty-cart' }, h('div', { class: 'ec-ico' }, icon('cart', 44)), h('strong', null, 'لم يتم إضافة أي أصناف بعد'), h('small', null, 'اختر المنتجات من القائمة لإضافتها إلى الطلب')),
     ), h('div', { class: 'cart-foot' }, totalsBox,
-      h('button', { class: 'btn checkout', disabled: !st.cart.length, onclick: () => submit(true) }, icon('card', 20), 'إتمام الطلب والدفع'),
-      h('button', { class: 'btn secondary send', disabled: !st.cart.length, onclick: () => submit(false) }, 'إرسال بدون دفع')));
+      h('button', { class: 'btn checkout', disabled: !st.cart.length, onclick: () => submit(true) }, icon('card', 20), 'إتمام الطلب والدفع')));
     drawTotals(); tick();
   }
   const totalsBox = h('div', { class: 'totals' });

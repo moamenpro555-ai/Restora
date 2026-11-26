@@ -171,10 +171,12 @@ const KDS = (() => {
     const close = () => { if (open) { open.destroy(); open.el.remove(); open = null; } };
     btn.addEventListener('click', e => {
       e.stopPropagation(); if (open) return close();
+      if (pinned() && document.querySelector('.pos.with-kds')) return; // already shown beside the cart - don't open a second copy
       const lv = view(); const pop = h('div', { class: 'kds-pop', onclick: ev => ev.stopPropagation() }, lv.el);
       wrap.append(pop); open = { destroy: lv.destroy, el: pop };
     });
     document.addEventListener('click', close);
+    window.addEventListener('kdspin', close); // pinning/unpinning closes the dropdown so only one list is left
     subscribe(list => { badge.textContent = list.length; badge.style.display = list.length ? '' : 'none'; btn.classList.toggle('has', list.length > 0); });
     badge.style.display = 'none';
     return wrap;
