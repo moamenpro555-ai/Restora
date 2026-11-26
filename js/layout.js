@@ -7,6 +7,9 @@ const NAV = [
   ['finance.html', 'المالية', 'finance.view'], ['reports.html', 'التقارير', 'reports.view'], ['settings.html', 'الإعدادات والهوية', 'settings.manage'],
   ['subscriptions.html', 'الاشتراك', 'subscription.manage'], ['attendance.html', 'الحضور والانصراف', null], ['support.html', 'الدعم الفني', null]
 ];
+const NAV_ICON = { 'dashboard.html': 'home', 'pos.html': 'pos', 'orders.html': 'list', 'kitchen.html': 'chef', 'tables.html': 'table', 'reservations.html': 'calendar', 'products.html': 'tag',
+  'inventory.html': 'box', 'customers.html': 'users', 'employees.html': 'shield', 'branches.html': 'store', 'finance.html': 'trend', 'reports.html': 'bars', 'settings.html': 'gear',
+  'subscriptions.html': 'crown', 'attendance.html': 'clock', 'support.html': 'support', 'admin.html': 'crown' };
 const ADMIN_NAV = [['admin.html', 'لوحة المنصة', null]];
 let ME = null;
 
@@ -22,20 +25,29 @@ async function boot(title, perm, opts = {}) {
 
   const nav = (isAdmin ? ADMIN_NAV : NAV).filter(n => !n[2] || ME.permissions.includes(n[2]));
   const here = location.pathname.split('/').pop();
-  const side = h('aside', { class: 'sidebar' },
-    h('div', { class: 'brand' }, branding && branding.logoUrl ? h('img', { src: branding.logoUrl, alt: '' }) : null, h('span', null, isAdmin ? 'إدارة المنصة' : ME.tenant.name)),
-    nav.map(([href, label]) => h('a', { href, class: href === here ? 'active' : '' }, label)));
-  const bell = h('button', { class: 'btn secondary bell', onclick: showNotifs }, '🔔');
+  const logoImg = branding && branding.logoUrl ? h('img', { src: branding.logoUrl, alt: '', class: 'logo-img' }) : null;
+  const side = h('aside', { class: 'sidebar', id: 'sidebar' },
+    h('div', { class: 'side-head' }, logoImg || icon('store', 22), h('span', null, isAdmin ? 'إدارة المنصة' : ME.tenant.name)),
+    h('nav', null, nav.map(([href, label]) => h('a', { href, class: href === here ? 'active' : '' }, icon(NAV_ICON[href] || 'grid', 20), h('span', null, label)))));
+  const bell = h('button', { class: 'icon-btn bell', title: 'الإشعارات', onclick: showNotifs }, icon('bell'));
+  const themeBtn = h('button', { class: 'icon-btn', title: 'الوضع الليلي' });
+  const paintTheme = () => { clear(themeBtn); themeBtn.append(icon(document.documentElement.dataset.theme === 'dark' ? 'sun' : 'moon')); };
+  themeBtn.addEventListener('click', () => { const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = t; localStorage.setItem('theme', t); paintTheme(); });
+  paintTheme();
+  const userMenu = h('div', { class: 'user-menu', hidden: true }, h('div', { class: 'muted', style: 'padding:6px 10px' }, ME.email || ''), h('button', { class: 'um-item', onclick: logout }, icon('logout', 18), h('span', null, 'تسجيل الخروج')));
+  const userBtn = h('button', { class: 'user-chip', onclick: e => { e.stopPropagation(); userMenu.hidden = !userMenu.hidden; } }, h('span', { class: 'avatar' }, (ME.name || '?').trim().charAt(0).toUpperCase()), h('span', { class: 'uname' }, ME.name), icon('chevron', 16));
+  document.addEventListener('click', () => { userMenu.hidden = true; });
   const bar = h('header', { class: 'topbar' },
-    h('button', { class: 'btn secondary menu-btn', onclick: () => side.classList.toggle('open') }, '☰'), h('h1', null, title),
-    isAdmin ? null : bell,
-    h('button', { class: 'btn secondary', title: 'الوضع الليلي', onclick: () => { const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = t; localStorage.setItem('theme', t); } }, '◐'),
-    h('span', { class: 'muted' }, ME.name), h('button', { class: 'btn secondary', onclick: logout }, 'خروج'));
+    h('button', { class: 'icon-btn menu-btn', onclick: () => side.classList.toggle('open'), title: 'القائمة' }, '☰'),
+    h('div', { class: 'brand-top' }, h('span', { class: 'brand-ico' }, icon('chef', 26)), h('div', null, h('strong', null, 'Restora'), h('small', null, 'نظام نقاط البيع الذكي'))),
+    h('h1', { class: 'page-title' }, title),
+    h('div', { id: 'bar-slot', class: 'bar-slot' }),
+    isAdmin ? null : bell, themeBtn, h('div', { class: 'user-wrap' }, userBtn, userMenu));
   const view = h('main', { id: 'view' });
   const st = ME.tenant && ME.tenant.status;
   const banner = st === 'EXPIRED' ? h('div', { class: 'banner' }, 'اشتراكك منتهي. ', h('a', { href: 'subscriptions.html' }, 'جدّد الآن')) : st === 'SUSPENDED' ? h('div', { class: 'banner' }, 'الحساب موقوف. تواصل مع الدعم.') : null;
   clear(document.body);
-  document.body.append(h('div', { class: 'app' }, side, h('div', { class: 'main' }, bar, banner, view)), h('div', { id: 'print-area' }));
+  document.body.append(h('div', { class: 'app' }, bar, banner, h('div', { class: 'shell' }, side, view)), h('div', { id: 'print-area' }));
   if (perm && !ME.permissions.includes(perm)) {
     // a role without dashboard access lands on the first page it is allowed to use
     const first = nav.find(n => n[0] !== here);
@@ -45,7 +57,7 @@ async function boot(title, perm, opts = {}) {
   return view;
 }
 async function refreshBell(bell) {
-  try { const r = await API.get('/notifications'); bell.dataset.unread = r.unread; clear(bell); bell.append('🔔', r.unread ? h('span', { class: 'n' }, r.unread) : null); } catch {}
+  try { const r = await API.get('/notifications'); bell.dataset.unread = r.unread; clear(bell); bell.append(icon('bell'), r.unread ? h('span', { class: 'n' }, r.unread) : null); } catch {}
 }
 async function showNotifs() {
   try {

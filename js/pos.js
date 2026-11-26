@@ -22,13 +22,16 @@
     const zn = zones.find(z => z.id === st.zoneId); const fee = st.type === 'DELIVERY' ? Number(zn ? zn.fee : mods.deliveryFee || 0) : 0;
     return { sub, disc, tax, fee, total: sub - disc + tax + fee };
   }
+  const catIcon = n => (/مشروب|عصير|قهوة|شاي|drink|juice|coffee/i.test(n) ? 'cup' : /حلو|كيك|dessert|cake|sweet/i.test(n) ? 'cake' : /وجب|رئيس|main|meal/i.test(n) ? 'cloche' : 'grid');
   function drawProducts() {
     clear(catBar); clear(grid);
-    [['all', 'الكل'], ...cats.map(c => [c.id, c.name])].forEach(([id, n]) => catBar.append(h('button', { class: 'btn sm ' + (st.cat === id ? '' : 'secondary'), onclick: () => { st.cat = id; drawProducts(); } }, n)));
+    [['all', 'الكل'], ...cats.map(c => [c.id, c.name])].forEach(([id, n]) => catBar.append(h('button', { class: 'pill' + (st.cat === id ? ' on' : ''), onclick: () => { st.cat = id; drawProducts(); } }, id === 'all' ? null : icon(catIcon(n), 18), n)));
     const list = products.filter(p => (st.cat === 'all' || p.categoryId === st.cat) && p.name.includes(st.q));
     if (!list.length) grid.append(h('div', { class: 'empty' }, 'لا منتجات'));
     list.forEach(p => grid.append(h('div', { class: 'card pcard' + (p.isAvailable ? '' : ' off'), onclick: () => pick(p) },
-      p.imageUrl ? h('img', { src: p.imageUrl, alt: '' }) : null, h('strong', null, p.name), h('span', { class: 'price' }, money(p.price)))));
+      h('div', { class: 'pimg' }, p.imageUrl ? h('img', { src: p.imageUrl, alt: '' }) : icon('chef', 40)),
+      h('div', { class: 'pname' }, p.name),
+      h('div', { class: 'pfoot' }, h('span', { class: 'price' }, p.isAvailable ? money(p.price) : 'غير متاح'), h('span', { class: 'padd' }, icon('plus', 18))))));
   }
   function addLine(p, options, notes) {
     const l = { productId: p.id, name: p.name, price: Number(p.price), options, qty: 1, notes };
@@ -54,23 +57,26 @@
   }
   function drawCart() {
     clear(cartBox);
-    const t = totals();
-    cartBox.append(h('h3', null, 'الطلب الحالي'),
+    cartBox.append(h('div', { class: 'cart-head' }, h('h3', null, 'الطلب الحالي'), icon('cart', 24)),
       branches.length > 1 ? h('select', { onchange: async e => { st.branchId = e.target.value; st.table = ''; await Promise.all([loadTables(), loadRegister()]); drawCart(); } }, branches.map(b => h('option', { value: b.id, selected: b.id === st.branchId }, b.name))) : null,
-      !register ? h('div', { class: 'banner', style: 'border-radius:8px;margin-bottom:8px' }, 'لا توجد وردية نقدية مفتوحة ', h('button', { class: 'btn sm', onclick: openRegister }, 'فتح وردية')) : h('div', { class: 'muted' }, 'الوردية مفتوحة منذ ' + dt(register.openedAt) + ' '),
-      register ? h('button', { class: 'btn secondary sm', onclick: closeRegister }, 'إغلاق الوردية') : null,
+      !register
+        ? h('div', { class: 'shift-banner warn' }, h('div', { class: 'sb-text' }, icon('clock', 18), 'لا توجد وردية نقدية مفتوحة'), h('button', { class: 'btn big', onclick: openRegister }, 'فتح وردية', icon('play', 16)))
+        : h('div', { class: 'shift-banner ok' }, h('div', { class: 'sb-text' }, icon('clock', 18), 'الوردية مفتوحة منذ ' + dt(register.openedAt)), h('button', { class: 'btn secondary sm', onclick: closeRegister }, 'إغلاق الوردية')),
       h('select', { onchange: e => { st.type = e.target.value; drawCart(); } }, Object.entries(AR.type).filter(([k]) => k !== 'DINE_IN' || mods.tables !== false).filter(([k]) => k !== 'DELIVERY' || mods.delivery !== false).map(([k, n]) => h('option', { value: k, selected: k === st.type }, n))),
       st.type === 'DINE_IN' ? h('select', { onchange: e => { st.table = e.target.value; } }, h('option', { value: '' }, 'اختر الطاولة'), tables.map(x => h('option', { value: x.number, selected: x.number === st.table }, `طاولة ${x.number}${x.orders.length ? ' (مشغولة)' : ''}`))) : null,
       h('div', { class: 'two' }, h('input', { placeholder: 'اسم العميل', value: st.name, oninput: e => { st.name = e.target.value; } }), h('input', { placeholder: 'الهاتف', value: st.phone, oninput: e => { st.phone = e.target.value; } })),
       st.type === 'DELIVERY' ? h('input', { placeholder: 'عنوان التوصيل', value: st.addr, oninput: e => { st.addr = e.target.value; } }) : null,
       st.type === 'DELIVERY' && zones.length ? h('select', { onchange: e => { st.zoneId = e.target.value; drawTotals(); } }, h('option', { value: '' }, 'منطقة التوصيل (الرسوم الافتراضية)'), zones.map(z => h('option', { value: z.id, selected: z.id === st.zoneId }, `${z.name} - ${z.fee}`))) : null,
-      st.cart.length ? st.cart.map((l, i) => h('div', { class: 'cart-line' }, h('div', null, h('strong', null, l.name), l.options.length ? h('div', { class: 'muted' }, l.options.map(o => o.choice).join('، ')) : null, h('small', { class: 'price' }, money(lineTotal(l)))),
-        h('div', { class: 'qty' }, h('button', { onclick: () => { l.qty--; if (l.qty < 1) st.cart.splice(i, 1); drawCart(); } }, '−'), h('span', null, l.qty), h('button', { onclick: () => { l.qty++; drawCart(); } }, '+')))) : h('div', { class: 'empty' }, 'السلة فارغة'),
+      h('label', { class: 'sec' }, 'الأصناف المضافة'),
+      st.cart.length ? h('div', { class: 'cart-lines' }, st.cart.map((l, i) => h('div', { class: 'cart-line' }, h('div', null, h('strong', null, l.name), l.options.length ? h('div', { class: 'muted' }, l.options.map(o => o.choice).join('، ')) : null, h('small', { class: 'price' }, money(lineTotal(l)))),
+        h('div', { class: 'qty' }, h('button', { onclick: () => { l.qty--; if (l.qty < 1) st.cart.splice(i, 1); drawCart(); } }, '−'), h('span', null, l.qty), h('button', { onclick: () => { l.qty++; drawCart(); } }, '+')))))
+        : h('div', { class: 'empty-cart' }, h('div', { class: 'ec-ico' }, icon('cart', 44)), h('strong', null, 'لم يتم إضافة أي أصناف بعد'), h('small', null, 'اختر المنتجات من القائمة لإضافتها إلى الطلب')),
       h('input', { type: 'number', min: '0', placeholder: 'خصم (مبلغ)', value: st.discount || '', oninput: e => { st.discount = Number(e.target.value); drawTotals(); } }),
       h('input', { placeholder: 'ملاحظات', value: st.notes, oninput: e => { st.notes = e.target.value; } }),
       totalsBox,
-      h('div', { class: 'row' }, h('button', { class: 'btn secondary', disabled: !st.cart.length, onclick: () => submit(false) }, 'إرسال بدون دفع'), h('button', { class: 'btn ok', disabled: !st.cart.length, onclick: () => submit(true) }, 'دفع وإنهاء')));
-    drawTotals();
+      h('button', { class: 'btn checkout', disabled: !st.cart.length, onclick: () => submit(true) }, icon('card', 20), 'إتمام الطلب والدفع'),
+      h('button', { class: 'btn secondary send', disabled: !st.cart.length, onclick: () => submit(false) }, 'إرسال بدون دفع'));
+    drawTotals(); tick();
   }
   const totalsBox = h('div', { class: 'totals' });
   function drawTotals() {
@@ -105,7 +111,16 @@
       st.cart = []; st.discount = 0; st.notes = ''; st.name = ''; st.phone = ''; st.addr = ''; await loadTables(); drawCart();
     } catch (e) { fail(e); }
   }
+  // Live clock (top bar): current time and date, updates every second.
+  const tVal = h('span', { class: 't-val' }), tLbl = h('small'), timerChip = h('div', { class: 'shift-timer' }, icon('clock', 22), h('div', null, tVal, tLbl));
+  function tick() {
+    const d = new Date();
+    tVal.textContent = d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    tLbl.textContent = d.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' });
+  }
+  setInterval(tick, 1000);
+  const slot = $('#bar-slot'); if (slot) slot.append(timerChip);
   clear(v);
-  v.append(h('div', { class: 'pos' }, h('div', { class: 'pos-products' }, h('input', { placeholder: 'بحث عن منتج...', oninput: e => { st.q = e.target.value; drawProducts(); } }), catBar, grid), cartBox));
+  v.append(h('div', { class: 'pos' }, h('div', { class: 'pos-products' }, h('div', { class: 'search' }, h('input', { placeholder: 'ابحث عن منتج...', oninput: e => { st.q = e.target.value; drawProducts(); } }), h('span', { class: 'search-ico' }, icon('search', 20))), catBar, grid), cartBox));
   drawProducts(); drawCart();
 })();
