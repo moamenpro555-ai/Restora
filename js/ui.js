@@ -20,8 +20,8 @@ function h(tag, attrs, ...kids) {
 }
 const $ = (s, r = document) => r.querySelector(s);
 const clear = el => { while (el.firstChild) el.removeChild(el.firstChild); return el; };
-const money = n => Number(n || 0).toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + ((window.ME && ME.tenant && ME.tenant.currency) || 'EGP');
-const dt = d => d ? new Date(d).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) : '-';
+const money = n => ('' + Number(n || 0).toLocaleString('ar-EG-u-nu-latn', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + ((window.ME && ME.tenant && ME.tenant.currency) || 'EGP') + '\u2069').replace(/^/, '\u2066');
+const dt = d => d ? new Date(d).toLocaleString('ar-EG-u-nu-latn', { dateStyle: 'short', timeStyle: 'short' }) : '-';
 const AR = {
   status: { NEW: 'جديد', CONFIRMED: 'مؤكد', PREPARING: 'قيد التحضير', READY: 'جاهز', OUT_FOR_DELIVERY: 'في الطريق', COMPLETED: 'مكتمل', CANCELLED: 'ملغي' },
   type: { DINE_IN: 'داخل المطعم', TAKEAWAY: 'استلام', DELIVERY: 'توصيل' },

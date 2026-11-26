@@ -7,7 +7,7 @@
   const R = data.restaurant, br = R.branding || {}, mods = R.modules;
   applyBranding(br); document.title = R.name;
   if (br.fontFamily) document.documentElement.style.setProperty('--font', `'${br.fontFamily}','Cairo',system-ui,sans-serif`);
-  const fmt = n => Number(n || 0).toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + R.currency;
+  const fmt = n => ('\u2066' + Number(n || 0).toLocaleString('ar-EG-u-nu-latn', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + R.currency + '\u2069');
   const KEY = 'cart:' + slug;
   let cart = []; try { cart = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch {}
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(cart)); } catch {} };

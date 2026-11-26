@@ -115,8 +115,8 @@
   const tVal = h('span', { class: 't-val' }), tLbl = h('small'), timerChip = h('div', { class: 'shift-timer' }, icon('clock', 22), h('div', null, tVal, tLbl));
   function tick() {
     const d = new Date();
-    tVal.textContent = d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-    tLbl.textContent = d.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' });
+    tVal.textContent = d.toLocaleTimeString('ar-EG-u-nu-latn', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    tLbl.textContent = d.toLocaleDateString('ar-EG-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' });
   }
   setInterval(tick, 1000);
   const slot = $('#bar-slot'); if (slot) slot.append(timerChip);

@@ -8,7 +8,7 @@
     try {
       [tables, branches] = await Promise.all([API.get('/tables'), API.get('/branches')]);
       const rows = await API.get('/reservations' + qs(bounds())); clear(list);
-      list.append(dataTable([{ label: 'الوقت', render: r => new Date(r.reservedAt).toLocaleTimeString('ar-EG', { timeStyle: 'short' }) }, { label: 'الاسم', key: 'customerName' }, { label: 'الهاتف', key: 'phone' }, { label: 'الأشخاص', key: 'guests' },
+      list.append(dataTable([{ label: 'الوقت', render: r => new Date(r.reservedAt).toLocaleTimeString('ar-EG-u-nu-latn', { timeStyle: 'short' }) }, { label: 'الاسم', key: 'customerName' }, { label: 'الهاتف', key: 'phone' }, { label: 'الأشخاص', key: 'guests' },
         { label: 'الطاولة', render: r => r.table ? r.table.number : '-' }, { label: 'الحالة', render: r => h('span', { class: 'badge ' + (['CANCELLED', 'NO_SHOW'].includes(r.status) ? 'err' : r.status === 'PENDING' ? 'warn' : 'ok') }, ST[r.status]) },
         { label: '', render: r => h('div', { class: 'row' }, h('button', { class: 'btn sm secondary', onclick: () => form(r) }, 'تعديل'),
           h('select', { onchange: async e => { await API.patch('/reservations/' + r.id, { status: e.target.value }).catch(fail); load(); } }, Object.entries(ST).map(([k, n]) => h('option', { value: k, selected: k === r.status }, n)))) }], rows, 'لا حجوزات في هذا اليوم'));
