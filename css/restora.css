@@ -337,3 +337,22 @@
 .qty .ln-note.has{background:var(--primary);color:#fff}
 .ln-note-t{display:flex;align-items:center;gap:4px;color:var(--primary);font-size:.82rem;font-weight:600;margin-top:2px}
 .pay-extra{display:grid;gap:6px;margin-bottom:12px}.pay-extra label{font-weight:700;margin:0}.pay-extra input,.pay-extra textarea{margin:0}
+
+/* ===== Cashier: fixed page, only the product cards scroll ===== */
+@media(min-width:901px){
+  html:has(.pos),body:has(.pos){height:100%;overflow:hidden}
+  .app:has(.pos){height:100vh;display:flex;flex-direction:column}
+  .app:has(.pos) .topbar{flex:none}
+  .app:has(.pos) .shell{flex:1;min-height:0;align-items:stretch;padding-bottom:14px}
+  .app:has(.pos) .sidebar{position:static;max-height:none;height:100%;overflow-y:auto}
+  .app:has(.pos) .main-col{min-height:0;gap:0}
+  .app:has(.pos) #view{flex:1;min-height:0;overflow:hidden;padding:0;display:flex;flex-direction:column}
+  .pos{flex:1;min-height:0;height:100%;align-items:stretch}
+  .pos-products{display:flex;flex-direction:column;min-height:0}
+  .pos-products .search,.pos-products .cats{flex:none}
+  .pos-products .grid{flex:1;min-height:0;overflow-y:auto;align-content:start;padding:2px 4px 14px 2px}
+  .pos .cart{height:100%;min-height:0;position:relative;top:auto;overflow:hidden;align-self:stretch}
+  .pos .cart-scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none}
+  .pos .cart-scroll::-webkit-scrollbar{display:none}
+  .pos .kv-side{position:static;height:100%;max-height:none;overflow:auto}
+}
