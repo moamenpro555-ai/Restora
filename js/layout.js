@@ -29,6 +29,7 @@ async function boot(title, perm, opts = {}) {
   const side = h('aside', { class: 'sidebar', id: 'sidebar' },
     h('div', { class: 'side-head' }, logoImg || h('span', { class: 'side-logo' }, icon('store', 24)), h('span', { class: 'side-name' }, isAdmin ? 'إدارة المنصة' : ME.tenant.name), icon('chevron', 16)),
     h('nav', null, nav.map(([href, label]) => h('a', { href, class: href === here ? 'active' : '' }, icon(NAV_ICON[href] || 'grid', 20), h('span', null, label)))));
+  if (opts.support) side.append(h('div', { class: 'side-support' }, h('div', { class: 'ss-top' }, icon('support', 34), h('div', null, h('strong', null, 'دعم فني'), h('small', null, 'متاح دائمًا لمساعدتك'))), h('a', { class: 'ss-btn', href: 'support.html' }, 'تواصل معنا', icon('arrowl', 18))));
   const bell = h('button', { class: 'icon-btn bell', title: 'الإشعارات', onclick: showNotifs }, icon('bell'));
   const themeBtn = h('button', { class: 'icon-btn', title: 'الوضع الليلي' });
   const paintTheme = () => { clear(themeBtn); themeBtn.append(icon(document.documentElement.dataset.theme === 'dark' ? 'sun' : 'moon')); };

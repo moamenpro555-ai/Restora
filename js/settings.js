@@ -1,5 +1,13 @@
 (async () => {
-  const v = await boot('الإعدادات والهوية', 'settings.manage'); if (!v) return;
+  const v = await boot('الإعدادات والهوية', 'settings.manage', { support: true, foot: { text: '© 2025 Restora. جميع الحقوق محفوظة', icon: 'heart', side: 'معاً .. لننجح أكثر' } }); if (!v) return;
+  const sbox = document.getElementById('bar-slot');
+  if (sbox) sbox.append(h('label', { class: 'searchbox' }, h('input', { type: 'search', placeholder: 'ابحث في الإعدادات ...', oninput: e => { const t = e.target.value.trim(); document.querySelectorAll('.acc').forEach(a => { a.hidden = !!t && !a.textContent.includes(t); }); } }), icon('search', 20)));
+  const acc = (ic, title, sub, kids, open) => {
+    const el = h('section', { class: 'acc' + (open ? ' open' : '') },
+      h('button', { type: 'button', class: 'acc-head', onclick: () => el.classList.toggle('open') }, h('span', { class: 'acc-ic' }, icon(ic, 28)), h('span', { class: 'acc-t' }, h('strong', null, title), h('small', null, sub)), icon('chevron', 20)),
+      h('div', { class: 'acc-body' }, kids));
+    return el;
+  };
   let b, g;
   try { [b, g] = await Promise.all([API.get('/settings/branding'), API.get('/settings/general')]); } catch (e) { v.append(h('div', { class: 'card empty' }, e.message)); return; }
   const m = g.modules || {}; const soc = b.social || {};
@@ -26,7 +34,7 @@
       modules: { tables: c('tables'), delivery: c('delivery'), online: c('online'), qrOrdering: c('qrOrdering'), reservations: c('reservations'), preventNegativeStock: c('preventNegativeStock'),
         taxRate: nu('taxRate'), deliveryFee: nu('deliveryFee'), minOrder: nu('minOrder'), loyaltyRate: nu('loyaltyRate'), deductOn: f.deductOn.value, timezone: f.timezone.value || 'Africa/Cairo' } }); toast('تم الحفظ'); setTimeout(() => location.reload(), 600); } catch (err) { fail(err); }
   } },
-    h('h3', { style: 'grid-column:1/-1' }, 'الإعدادات العامة'),
+    h('h3', { style: 'grid-column:1/-1' }, 'العملة والضريبة والتشغيل'),
     h('div', null, h('label', null, 'اسم المطعم'), h('input', { name: 'name', value: g.name })), h('div', null, h('label', null, 'المعرّف في الرابط (slug)'), h('input', { name: 'slug', value: g.slug, pattern: '[a-z0-9-]{3,40}' })),
     h('div', null, h('label', null, 'العملة (3 أحرف)'), h('input', { name: 'currency', value: g.currency, maxlength: 3 })), h('div', null, h('label', null, 'ضريبة % '), h('input', { name: 'taxRate', type: 'number', step: '0.01', value: m.taxRate || 0 })),
     h('div', null, h('label', null, 'رسوم التوصيل'), h('input', { name: 'deliveryFee', type: 'number', step: '0.01', value: m.deliveryFee || 0 })), h('div', null, h('label', null, 'الحد الأدنى للطلب أونلاين'), h('input', { name: 'minOrder', type: 'number', step: '0.01', value: m.minOrder || 0 })),
@@ -49,8 +57,19 @@
   }
   const zform = z => formModal({ title: z ? 'تعديل منطقة' : 'منطقة توصيل', values: z || { isActive: true, minOrder: 0 }, fields: [{ name: 'name', label: 'الاسم', required: true }, { name: 'fee', label: 'رسوم التوصيل', type: 'number', step: '0.01', required: true }, { name: 'minOrder', label: 'الحد الأدنى للطلب', type: 'number', step: '0.01' }, { name: 'isActive', label: 'نشطة', type: 'checkbox' }],
     onSubmit: async d => { if (z) await API.patch('/delivery-zones/' + z.id, d); else await API.post('/delivery-zones', d); loadZones(); } });
-  v.append(h('div', { class: 'card' }, h('h3', null, 'مناطق التوصيل'), h('button', { class: 'btn sm', onclick: () => zform() }, '+ منطقة'), zbox));
+  const zonesCard = h('div', { class: 'card' }, h('h3', null, 'مناطق التوصيل'), h('button', { class: 'btn sm', onclick: () => zform() }, '+ منطقة'), zbox);
   loadZones();
-  v.append(h('div', { class: 'card' }, h('h3', null, 'رابط المنيو وQR'), h('a', { href: link, target: '_blank' }, link), qrBox, h('p', { class: 'muted' }, 'GitHub Pages لا يدعم دومينًا مستقلًا لكل مطعم؛ راجع docs في الدليل للدومينات المخصصة.')), brandForm, genForm, pw);
+  const linkCard = h('div', { class: 'card' }, h('h3', null, 'رابط المنيو وQR'), h('a', { href: link, target: '_blank' }, link), qrBox, h('p', { class: 'muted' }, 'GitHub Pages لا يدعم دومينًا مستقلًا لكل مطعم؛ راجع docs في الدليل للدومينات المخصصة.'));
+  const go = (href, t) => h('a', { class: 'btn', href }, t);
+  v.append(h('div', { class: 'set-panel' },
+    h('div', { class: 'ph' }, h('div', null, h('h1', null, h('span', { class: 'ph-ico' }, icon('gear', 40)), 'الإعدادات العامة'), h('p', { class: 'muted' }, 'قم بتخصيص إعدادات منصتك بكل سهولة'))),
+    h('div', { class: 'acc-grid' },
+      acc('store', 'إعدادات المطاعم', 'إدارة بيانات المطاعم والفروع', [zonesCard, go('branches.html', 'إدارة الفروع')]),
+      acc('shield', 'إعدادات الأمان', 'إدارة أمان حسابك وكلمات المرور', [pw]),
+      acc('eye', 'إعدادات المظهر', 'تغيير شكل ومظهر المنصة', [brandForm]),
+      acc('bell', 'إعدادات الإشعارات', 'تخصيص طريقة استلام الإشعارات', [h('button', { class: 'btn', type: 'button', onclick: showNotifs }, 'عرض الإشعارات')]),
+      acc('card', 'إعدادات الفواتير والمدفوعات', 'إدارة فواتير العملاء وطرق الدفع', [genForm], true),
+      acc('bars', 'إعدادات التقارير', 'تخصيص التقارير والإحصائيات', [go('reports.html', 'فتح التقارير')]),
+      acc('filter', 'إعدادات متقدمة', 'خيارات متقدمة للمطورين', [linkCard]))));
   if (window.QRCode) new QRCode(qrBox, { text: link, width: 160, height: 160 });
 })();
