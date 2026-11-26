@@ -61,4 +61,5 @@
   v.append(tabs([['', 'الكل'], ...Object.entries(AR.status)], k => { status = k; load(); }), list);
   connectSocket({ 'order:new': () => { toast('طلب جديد'); load(); }, 'order:status': load });
   load();
+  if (location.hash.length > 1) details(decodeURIComponent(location.hash.slice(1)));
 })();
