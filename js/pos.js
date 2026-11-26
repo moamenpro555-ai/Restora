@@ -15,9 +15,10 @@
   const grid = h('div', { class: 'grid' }), catBar = h('div', { class: 'cats' }), cartBox = h('div', { class: 'card cart' });
   const key = l => l.productId + JSON.stringify(l.options) + (l.notes || '');
   const lineTotal = l => (l.price + l.options.reduce((s, o) => s + o.price, 0)) * l.qty;
-  function totals() {
+  const totals = () => totalsFor(st.discount);
+  function totalsFor(discount) {
     const sub = st.cart.reduce((s, l) => s + lineTotal(l), 0);
-    const disc = Math.min(Math.max(st.discount || 0, 0), sub);
+    const disc = Math.min(Math.max(discount || 0, 0), sub);
     const tax = (sub - disc) * Number(mods.taxRate || 0) / 100;
     const zn = zones.find(z => z.id === st.zoneId); const fee = st.type === 'DELIVERY' ? Number(zn ? zn.fee : mods.deliveryFee || 0) : 0;
     return { sub, disc, tax, fee, total: sub - disc + tax + fee };
@@ -55,6 +56,10 @@
       } }, 'إضافة'));
     const m = modal(p.name, body);
   }
+  function lineNote(l) {
+    formModal({ title: 'ملاحظة على: ' + l.name, values: { notes: l.notes || '' }, fields: [{ name: 'notes', label: 'الملاحظة (تظهر للمطبخ)', type: 'textarea' }],
+      onSubmit: async d => { l.notes = (d.notes || '').trim() || undefined; drawCart(); } });
+  }
   function drawCart() {
     drawShift(); clear(cartBox);
     cartBox.append(h('div', { class: 'cart-scroll' }, h('div', { class: 'cart-head' }, h('h3', null, 'الطلب الحالي'), icon('cart', 24)),
@@ -65,11 +70,9 @@
       st.type === 'DELIVERY' ? h('input', { placeholder: 'عنوان التوصيل', value: st.addr, oninput: e => { st.addr = e.target.value; } }) : null,
       st.type === 'DELIVERY' && zones.length ? h('select', { onchange: e => { st.zoneId = e.target.value; drawTotals(); } }, h('option', { value: '' }, 'منطقة التوصيل (الرسوم الافتراضية)'), zones.map(z => h('option', { value: z.id, selected: z.id === st.zoneId }, `${z.name} - ${z.fee}`))) : null,
       h('label', { class: 'sec' }, 'الأصناف المضافة'),
-      st.cart.length ? h('div', { class: 'cart-lines' }, st.cart.map((l, i) => h('div', { class: 'cart-line' }, h('div', null, h('strong', null, l.name), l.options.length ? h('div', { class: 'muted' }, l.options.map(o => o.choice).join('، ')) : null, h('small', { class: 'price' }, money(lineTotal(l)))),
-        h('div', { class: 'qty' }, h('button', { onclick: () => { l.qty--; if (l.qty < 1) st.cart.splice(i, 1); drawCart(); } }, '−'), h('span', null, l.qty), h('button', { onclick: () => { l.qty++; drawCart(); } }, '+')))))
+      st.cart.length ? h('div', { class: 'cart-lines' }, st.cart.map((l, i) => h('div', { class: 'cart-line' }, h('div', null, h('strong', null, l.name), l.options.length ? h('div', { class: 'muted' }, l.options.map(o => o.choice).join('، ')) : null, l.notes ? h('div', { class: 'ln-note-t' }, icon('note', 14), l.notes) : null, h('small', { class: 'price' }, money(lineTotal(l)))),
+        h('div', { class: 'qty' }, h('button', { class: 'ln-note' + (l.notes ? ' has' : ''), title: 'ملاحظة على الصنف', onclick: () => lineNote(l) }, icon(l.notes ? 'edit' : 'plus', 15)), h('button', { onclick: () => { l.qty--; if (l.qty < 1) st.cart.splice(i, 1); drawCart(); } }, '−'), h('span', null, l.qty), h('button', { onclick: () => { l.qty++; drawCart(); } }, '+')))))
         : h('div', { class: 'empty-cart' }, h('div', { class: 'ec-ico' }, icon('cart', 44)), h('strong', null, 'لم يتم إضافة أي أصناف بعد'), h('small', null, 'اختر المنتجات من القائمة لإضافتها إلى الطلب')),
-      h('input', { type: 'number', min: '0', placeholder: 'خصم (مبلغ)', value: st.discount || '', oninput: e => { st.discount = Number(e.target.value); drawTotals(); } }),
-      h('input', { placeholder: 'ملاحظات', value: st.notes, oninput: e => { st.notes = e.target.value; } }),
     ), h('div', { class: 'cart-foot' }, totalsBox,
       h('button', { class: 'btn checkout', disabled: !st.cart.length, onclick: () => submit(true) }, icon('card', 20), 'إتمام الطلب والدفع'),
       h('button', { class: 'btn secondary send', disabled: !st.cart.length, onclick: () => submit(false) }, 'إرسال بدون دفع')));
@@ -91,21 +94,25 @@
   }
   async function submit(payNow) {
     if (st.type === 'DINE_IN' && !st.table && mods.tables !== false) return toast('اختر الطاولة', true);
+    let pay = null;
+    if (payNow) { // the payment dialog also takes the discount and the order notes; nothing is created if it is dismissed
+      pay = await collectPayment(totals().total, { totalFor: d => totalsFor(d).total, discount: st.discount, notes: st.notes });
+      if (!pay) return;
+      st.discount = pay.discount; st.notes = pay.notes;
+    }
     const body = { type: st.type, branchId: st.branchId, customerName: st.name || undefined, customerPhone: st.phone || undefined, deliveryAddress: st.addr || undefined, notes: st.notes || undefined,
       discount: st.discount || undefined, zoneId: st.type === 'DELIVERY' ? st.zoneId || undefined : undefined, tableNumber: st.type === 'DINE_IN' ? st.table : undefined,
-      items: st.cart.map(l => ({ productId: l.productId, quantity: l.qty, options: l.options.map(o => ({ group: o.group, choice: o.choice })) })) };
+      items: st.cart.map(l => ({ productId: l.productId, quantity: l.qty, notes: l.notes || undefined, options: l.options.map(o => ({ group: o.group, choice: o.choice })) })) };
     try {
-      let order = await API.post('/orders', body), paidNow = false;
-      if (payNow) {
-        const lines = await collectPayment(Number(order.total));
-        if (lines) {
-          await API.post(`/orders/${order.id}/pay`, { payments: lines });
-          await sendToKitchen(order); paidNow = true; // paid -> goes to the kitchen
-        }
-      }
-      if (!payNow) { await sendToKitchen(order); toast(`تم إرسال الطلب #${order.number} للمطبخ`); }
-      else if (order.payStatus !== 'PAID' && !paidNow) toast(`الطلب #${order.number} محفوظ بدون دفع (في سجل المبيعات) ولم يُرسل للمطبخ بعد`, true);
-      else toast(`تم الدفع وأُرسل الطلب #${order.number} للمطبخ`);
+      const order = await API.post('/orders', body);
+      if (pay) {
+        const lines = pay.lines.map(l => ({ ...l })), r2 = x => Math.round(x * 100) / 100, sum = r2(lines.reduce((a, l) => a + l.amount, 0));
+        // a full payment follows the server's authoritative total (cent rounding); a deliberate part-payment is left as entered
+        if (Math.abs(sum - r2(totalsFor(st.discount).total)) < 0.02) lines[lines.length - 1].amount = r2(lines[lines.length - 1].amount + Number(order.total) - sum);
+        await API.post(`/orders/${order.id}/pay`, { payments: lines });
+        await sendToKitchen(order); // paid -> goes to the kitchen
+        toast(`تم الدفع وأُرسل الطلب #${order.number} للمطبخ`);
+      } else { await sendToKitchen(order); toast(`تم إرسال الطلب #${order.number} للمطبخ`); }
       KDS.refresh();
       if (await confirmBox('طباعة الإيصال؟')) await printReceipt(order, brand);
       st.cart = []; st.discount = 0; st.notes = ''; st.name = ''; st.phone = ''; st.addr = ''; await loadTables(); drawCart();

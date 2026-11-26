@@ -1,7 +1,12 @@
-// Split-payment dialog shared by POS and Orders. Resolves with [{method,amount}] or null.
-function collectPayment(remaining) {
+// Split-payment dialog shared by POS and Orders. Without `opts` it resolves with [{method,amount}] or null.
+// With opts = { totalFor(discount) -> total, discount, notes } (POS) it also lets the cashier set the order discount and notes,
+// and resolves with { lines, discount, notes } or null.
+function collectPayment(remaining, opts) {
   return new Promise(res => {
-    const lines = [{ method: 'CASH', amount: remaining }];
+    let discount = (opts && opts.discount) || 0, notes = (opts && opts.notes) || '';
+    let need = opts ? opts.totalFor(discount) : remaining;
+    const r2 = x => Math.round(x * 100) / 100;
+    const lines = [{ method: 'CASH', amount: r2(need) }];
     const box = h('div');
     const draw = () => {
       clear(box);
@@ -11,9 +16,16 @@ function collectPayment(remaining) {
         lines.length > 1 ? h('button', { class: 'btn secondary sm', type: 'button', onclick: () => { lines.splice(i, 1); draw(); upd(); } }, '✕') : null)));
     };
     const info = h('div', { class: 'totals' });
-    const upd = () => { const s = lines.reduce((a, l) => a + (l.amount || 0), 0); clear(info); info.append(h('div', null, h('span', null, 'المطلوب'), h('span', null, money(remaining))), h('div', { class: 't' }, h('span', null, 'المدخل'), h('span', null, money(s))), h('div', null, h('span', null, 'المتبقي'), h('span', null, money(Math.max(0, remaining - s))))); ok.disabled = !(s > 0 && s <= remaining + 0.005); };
-    const ok = h('button', { class: 'btn ok', onclick: () => { m.close(); res(lines.filter(l => l.amount > 0)); } }, 'تأكيد الدفع');
-    const m = modal('تحصيل المبلغ', h('div', null, box, h('button', { class: 'btn secondary sm', type: 'button', onclick: () => { lines.push({ method: 'CARD', amount: 0 }); draw(); } }, '+ تقسيم الدفع'), info, h('div', { class: 'row', style: 'margin-top:12px' }, ok)));
+    const upd = () => { const s = lines.reduce((a, l) => a + (l.amount || 0), 0); clear(info); info.append(h('div', null, h('span', null, 'المطلوب'), h('span', null, money(need))), h('div', { class: 't' }, h('span', null, 'المدخل'), h('span', null, money(s))), h('div', null, h('span', null, 'المتبقي'), h('span', null, money(Math.max(0, need - s))))); ok.disabled = !(s > 0 && s <= need + 0.005); };
+    const extra = opts ? h('div', { class: 'pay-extra' },
+      h('label', null, 'الخصم (مبلغ)'),
+      h('input', { type: 'number', min: '0', step: '0.01', placeholder: '0', value: discount || '', oninput: e => {
+        discount = Math.max(0, Number(e.target.value) || 0); need = opts.totalFor(discount);
+        if (lines.length === 1) { lines[0].amount = r2(need); draw(); } upd(); } }),
+      h('label', null, 'ملاحظات على الطلب'),
+      h('textarea', { rows: 2, placeholder: 'اختياري', oninput: e => { notes = e.target.value; } }, notes)) : null;
+    const ok = h('button', { class: 'btn ok', onclick: () => { m.close(); const l = lines.filter(x => x.amount > 0); res(opts ? { lines: l, discount, notes: notes.trim() } : l); } }, 'تأكيد الدفع');
+    const m = modal('تحصيل المبلغ', h('div', null, extra, box, h('button', { class: 'btn secondary sm', type: 'button', onclick: () => { lines.push({ method: 'CARD', amount: 0 }); draw(); } }, '+ تقسيم الدفع'), info, h('div', { class: 'row', style: 'margin-top:12px' }, ok)));
     m.el.addEventListener('click', e => { if (e.target === m.el) res(null); });
     draw(); upd();
   });

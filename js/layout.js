@@ -42,8 +42,16 @@ async function boot(title, perm, opts = {}) {
   const userBtn = h('button', { class: 'user-chip', onclick: e => { e.stopPropagation(); userMenu.hidden = !userMenu.hidden; } }, avatar, h('span', { class: 'uname' }, chipName), icon('chevron', 16));
   document.addEventListener('click', () => { userMenu.hidden = true; });
   const tagline = opts.tagline || 'إدارة أذكى .. لمطعم أكثر نجاحاً';
+  // The menu button shows/hides the sidebar (remembered; the POS starts with it hidden to give the product cards more room).
+  const sbKey = 'sbHide:' + (here === 'pos.html' ? 'pos' : 'all');
+  const sbHidden = () => { try { const v = localStorage.getItem(sbKey); return v === null ? here === 'pos.html' : v === '1'; } catch { return here === 'pos.html'; } };
+  function toggleSide() {
+    if (window.innerWidth <= 900) return side.classList.toggle('open');
+    const app = document.querySelector('.app'), hide = !app.classList.contains('sb-hidden');
+    app.classList.toggle('sb-hidden', hide); try { localStorage.setItem(sbKey, hide ? '1' : '0'); } catch {}
+  }
   const bar = h('header', { class: 'topbar' },
-    h('button', { class: 'icon-btn menu-btn', onclick: () => side.classList.toggle('open'), title: 'القائمة' }, icon('menu', 24)),
+    h('button', { class: 'icon-btn menu-btn', onclick: toggleSide, title: 'القائمة' }, icon('menu', 24)),
     h('div', { class: 'brand-top' }, h('span', { class: 'brand-ico' }, icon('chef', 38)), h('div', null, h('strong', null, 'Restora'), h('small', null, 'Multi-Restaurant Platform'))),
     h('div', { class: 'tagline' }, h('span', { class: 'tg-deco' + (opts.deco ? ' ' + opts.deco : '') }), h('span', { class: 'tg-text' }, tagline)),
     h('div', { id: 'bar-slot', class: 'bar-slot' }),
@@ -63,6 +71,7 @@ async function boot(title, perm, opts = {}) {
     const first = nav.find(n => n[0] !== here);
     if (here === 'dashboard.html' && first) { location.replace(first[0]); return null; }
     view.append(h('div', { class: 'card empty' }, 'لا تملك صلاحية الوصول لهذه الصفحة')); return null; }
+  if (sbHidden()) document.querySelector('.app').classList.add('sb-hidden');
   if (kdsBtn) KDS.start();
   if (!isAdmin) { refreshBell(bell); setInterval(() => refreshBell(bell), 60000); }
   return view;
