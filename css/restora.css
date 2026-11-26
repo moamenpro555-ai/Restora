@@ -181,3 +181,5 @@
 @media(max-width:560px){.searchbox{max-width:none}.stat .st-v{font-size:1.7rem}.selpill{flex:1}.pg-btns{flex-wrap:wrap}}
 @media print{.app::after,.app-foot,.tip{display:none!important}}
 .kt-sub{color:var(--muted);font-weight:600;font-size:.88rem;margin-top:-4px}
+.av{width:40px;height:40px;border-radius:50%;display:inline-grid;place-items:center;color:#fff;font-weight:800;flex:none}
+.rt td.start{text-align:start}

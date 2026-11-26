@@ -204,6 +204,7 @@ const ICONS = {
   menu: 'M4 6h16M4 12h16M4 18h16',
   person: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0',
   x: 'M6 6l12 12M18 6L6 18',
+  alert: 'M12 3l10 18H2L12 3zM12 10v5M12 18h.01',
   expand: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'
 };
 function icon(name, size = 20) {
