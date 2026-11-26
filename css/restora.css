@@ -289,3 +289,28 @@
 .pay-empty strong{font-size:1.05rem}
 .pay-empty small{color:var(--muted);font-weight:600}
 @media(max-width:560px){.plan-btn{width:100%}}
+
+/* ===== live kitchen list (top-bar dropdown + pinned beside the POS cart) ===== */
+.kds-wrap{position:relative}
+.kds-btn{position:relative}.kds-btn.has{color:var(--primary)}
+.kds-btn .kds-n{position:absolute;top:-3px;inset-inline-start:-3px;background:var(--primary);color:#fff;border-radius:99px;min-width:20px;height:20px;padding:0 5px;font-size:.75rem;font-weight:700;display:grid;place-items:center}
+.kds-pop{position:fixed;top:80px;left:16px;z-index:80;width:min(380px,92vw);max-height:70vh;overflow:auto;background:var(--surface);border-radius:20px;box-shadow:0 20px 50px rgba(15,23,42,.28);border:1px solid var(--border)}
+.kv{display:flex;flex-direction:column}
+.kv-h{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--rs-line);position:sticky;top:0;background:var(--surface);z-index:1;border-radius:20px 20px 0 0}
+.kv-h svg{color:var(--primary)}.kv-c{background:var(--primary);color:#fff;border-radius:99px;padding:1px 10px;font-weight:700;font-size:.85rem}
+.kv-pin{width:36px;height:36px;box-shadow:none;border:1px solid var(--rs-line)}.kv-pin.on{background:var(--primary);color:#fff}
+.kv-b{display:flex;flex-direction:column;gap:10px;padding:12px}
+.kv-f{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-top:1px solid var(--rs-line);font-weight:700;color:var(--primary)}
+.kl{border:1px solid var(--rs-line);border-inline-start:5px solid var(--primary);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;background:var(--surface)}
+.kl.s-NEW,.kl.s-CONFIRMED{border-inline-start-color:#3b82f6}.kl.s-PREPARING{border-inline-start-color:#f59e0b}.kl.s-READY{border-inline-start-color:#16a34a}
+.kl-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.kl-n{font-size:1.1rem;direction:ltr}
+.kl-t{margin-inline-start:auto;display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-size:.8rem;font-weight:600}.kl-t.late{color:#dc2626}
+.kl-sub{color:var(--muted);font-size:.82rem;font-weight:600}.kl-lines{font-weight:600;font-size:.92rem;line-height:1.5}
+.kl-act{display:flex;gap:6px;flex-wrap:wrap}.kl-act .btn{border-radius:10px}
+.pos.with-kds{grid-template-columns:minmax(0,1fr) 380px 330px}
+.kv-side{position:sticky;top:90px;max-height:calc(100vh - 110px);overflow:auto;background:var(--surface);border-radius:22px;box-shadow:0 10px 30px -12px rgba(15,23,42,.18)}
+@media(max-width:1500px){.pos.with-kds{grid-template-columns:minmax(0,1fr) 380px}.pos.with-kds .kv-side{grid-column:1/-1;position:static;max-height:none}}
+@media(max-width:1000px){.pos.with-kds{grid-template-columns:1fr}}
+@media(max-width:700px){.kds-pop{position:fixed;top:76px;inset-inline:4vw;width:auto}}
+.kv-pin{color:var(--text)}.kv-pin svg{color:currentColor;stroke:currentColor}.kv-pin.on,.kv-pin.on svg{color:#fff!important}
+.app .topbar{z-index:60}

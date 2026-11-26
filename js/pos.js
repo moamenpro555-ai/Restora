@@ -99,6 +99,8 @@
       items: st.cart.map(l => ({ productId: l.productId, quantity: l.qty, options: l.options.map(o => ({ group: o.group, choice: o.choice })) })) };
     try {
       let order = await API.post('/orders', body);
+      // straight to the kitchen: no manual "accept" step for orders the cashier entered
+      try { await API.patch(`/orders/${order.id}/status`, { status: 'CONFIRMED' }); order.status = 'CONFIRMED'; } catch {}
       if (payNow) {
         const lines = await collectPayment(Number(order.total));
         if (lines) {
@@ -106,7 +108,7 @@
           if (st.type !== 'DINE_IN' && await confirmBox('تسليم الطلب الآن وإنهاؤه؟')) await API.patch(`/orders/${order.id}/status`, { status: 'COMPLETED' });
         }
       }
-      toast(`تم إنشاء الطلب #${order.number}`);
+      toast(`تم إنشاء الطلب #${order.number} وأُرسل للمطبخ`); KDS.refresh();
       if (await confirmBox('طباعة الإيصال؟')) await printReceipt(order, brand);
       st.cart = []; st.discount = 0; st.notes = ''; st.name = ''; st.phone = ''; st.addr = ''; await loadTables(); drawCart();
     } catch (e) { fail(e); }
@@ -123,4 +125,13 @@
   clear(v);
   v.append(h('div', { class: 'pos' }, h('div', { class: 'pos-products' }, h('div', { class: 'search' }, h('input', { placeholder: 'ابحث عن منتج...', oninput: e => { st.q = e.target.value; drawProducts(); } }), h('span', { class: 'search-ico' }, icon('search', 20))), catBar, grid), cartBox));
   drawProducts(); drawCart();
+  // Pinned kitchen list beside the cart (toggled from the kitchen button in the top bar).
+  const posEl = v.querySelector('.pos'); let kds = null;
+  function syncKds() {
+    const on = KDS.pinned() && KDS.allowed();
+    posEl.classList.toggle('with-kds', on);
+    if (on && !kds) { kds = KDS.view({ pinnedView: true }); posEl.append(kds.el); }
+    else if (!on && kds) { kds.destroy(); kds.el.remove(); kds = null; }
+  }
+  window.addEventListener('kdspin', syncKds); syncKds();
 })();
