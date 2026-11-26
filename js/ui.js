@@ -210,7 +210,11 @@ const ICONS = {
   wallet: 'M3 7a2 2 0 012-2h13v4M3 7v11a2 2 0 002 2h15V9H5a2 2 0 01-2-2zM16 14.5h.01',
   percent: 'M5 19L19 5M7 9a2 2 0 100-4 2 2 0 000 4zM17 19a2 2 0 100-4 2 2 0 000 4z',
   arrowup: 'M12 19V5M6 11l6-6 6 6',
-  expand: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'
+  expand: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
+  rocket: 'M5 19c-1-3 0-5 2-7l5-5c3-3 6-4 9-4 0 3-1 6-4 9l-5 5c-2 2-4 3-7 2zM9 15l-3 3M14.5 9.5h.01M6 14l-3-1 3-3M10 18l1 3 3-3',
+  gem: 'M6 4h12l4 6-10 11L2 10l4-6zM2 10h20M9 4l-2 6 5 11 5-11-2-6',
+  briefcase: 'M3 8h18v12H3zM9 8V5a1 1 0 011-1h4a1 1 0 011 1v3M3 13h18M11 13h2',
+  star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3z'
 };
 function icon(name, size = 20) {
   const NS = 'http://www.w3.org/2000/svg';
