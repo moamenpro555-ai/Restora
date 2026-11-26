@@ -183,3 +183,9 @@
 .kt-sub{color:var(--muted);font-weight:600;font-size:.88rem;margin-top:-4px}
 .av{width:40px;height:40px;border-radius:50%;display:inline-grid;place-items:center;color:#fff;font-weight:800;flex:none}
 .rt td.start{text-align:start}
+
+/* ---------- per-page header illustration (employees: building, branches: dining room) ---------- */
+.tg-deco.building{width:64px;height:64px;background-image:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27 fill=%27none%27 stroke=%27%23f97316%27 stroke-opacity=%27.55%27 stroke-width=%273%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M10 92V40l40-26 40 26v52M4 92h92%27/%3E%3Cpath d=%27M30 92V58h40v34M50 58v34M40 72h4M56 72h4%27/%3E%3Ccircle cx=%2750%27 cy=%2736%27 r=%279%27/%3E%3Cpath d=%27M18 52h6M76 52h6%27/%3E%3C/svg%3E")}
+.tg-deco.dining{width:64px;height:64px;background-image:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27 fill=%27none%27 stroke=%27%23f97316%27 stroke-opacity=%27.55%27 stroke-width=%273%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Crect x=%2710%27 y=%2712%27 width=%2780%27 height=%2748%27 rx=%2710%27/%3E%3Cpath d=%27M50 12v48M10 36h80%27/%3E%3Cpath d=%27M24 88V68h52v20M18 68h64M32 68v-8M68 68v-8%27/%3E%3C/svg%3E")}
+.filters .muted{font-size:.9rem;margin-inline-start:auto}
+#view>.fpills{margin-bottom:16px}

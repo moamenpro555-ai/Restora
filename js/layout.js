@@ -43,7 +43,7 @@ async function boot(title, perm, opts = {}) {
   const bar = h('header', { class: 'topbar' },
     h('button', { class: 'icon-btn menu-btn', onclick: () => side.classList.toggle('open'), title: 'القائمة' }, icon('menu', 24)),
     h('div', { class: 'brand-top' }, h('span', { class: 'brand-ico' }, icon('chef', 38)), h('div', null, h('strong', null, 'Restora'), h('small', null, 'Multi-Restaurant Platform'))),
-    h('div', { class: 'tagline' }, h('span', { class: 'tg-deco' }), h('span', { class: 'tg-text' }, tagline)),
+    h('div', { class: 'tagline' }, h('span', { class: 'tg-deco' + (opts.deco ? ' ' + opts.deco : '') }), h('span', { class: 'tg-text' }, tagline)),
     h('div', { id: 'bar-slot', class: 'bar-slot' }),
     themeBtn, isAdmin ? null : bell, h('div', { class: 'user-wrap' }, userBtn, userMenu));
   const view = h('main', { id: 'view' });
