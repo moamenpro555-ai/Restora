@@ -205,6 +205,11 @@ const ICONS = {
   person: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0',
   x: 'M6 6l12 12M18 6L6 18',
   alert: 'M12 3l10 18H2L12 3zM12 10v5M12 18h.01',
+  download: 'M12 4v12M7 11l5 5 5-5M5 20h14',
+  printer: 'M7 8V3h10v5M7 17H5a1 1 0 01-1-1v-6a2 2 0 012-2h12a2 2 0 012 2v6a1 1 0 01-1 1h-2M7 14h10v7H7z',
+  wallet: 'M3 7a2 2 0 012-2h13v4M3 7v11a2 2 0 002 2h15V9H5a2 2 0 01-2-2zM16 14.5h.01',
+  percent: 'M5 19L19 5M7 9a2 2 0 100-4 2 2 0 000 4zM17 19a2 2 0 100-4 2 2 0 000 4z',
+  arrowup: 'M12 19V5M6 11l6-6 6 6',
   expand: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'
 };
 function icon(name, size = 20) {
@@ -246,10 +251,10 @@ function searchBox(placeholder, onInput) {
   return h('label', { class: 'searchbox' }, h('input', { type: 'search', placeholder, oninput: e => onInput(e.target.value) }), icon('search', 20));
 }
 // Summary stat card (reservations / products). tone: blue|green|orange|red|purple
-function statCard(tone, ico, label, value) {
+function statCard(tone, ico, label, value, sub, subIco) {
   const wave = '<svg viewBox="0 0 120 30" preserveAspectRatio="none"><path d="M0 24 C20 8 35 26 60 16 S100 6 120 14 L120 30 L0 30Z" fill="currentColor" fill-opacity=".12"/><path d="M0 24 C20 8 35 26 60 16 S100 6 120 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
   const w = h('span', { class: 'st-wave' }); w.innerHTML = wave; // static markup, no user data
-  return h('div', { class: 'stat ' + tone }, h('div', { class: 'st-tx' }, h('div', { class: 'st-l' }, label), h('div', { class: 'st-v' }, value)), h('span', { class: 'st-ic' }, icon(ico, 28)), w);
+  return h('div', { class: 'stat ' + tone }, h('div', { class: 'st-tx' }, h('div', { class: 'st-l' }, label), h('div', { class: 'st-v' }, value), sub ? h('div', { class: 'st-sub' }, subIco ? icon(subIco, 15) : null, sub) : null), h('span', { class: 'st-ic' }, icon(ico, 28)), w);
 }
 // Pager laid out left-to-right like the design: [‹] 1 2 3 [›]. Calls onPage(n).
 function pager(total, size, page, onPage, label) {

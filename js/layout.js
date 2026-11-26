@@ -52,6 +52,7 @@ async function boot(title, perm, opts = {}) {
   document.title = title + ' | Restora';
   const foot = opts.foot ? h('footer', { class: 'app-foot' },
     h('div', { class: 'foot-pill' }, h('span', null, opts.foot.text), icon(opts.foot.icon || 'heart', 20)),
+    opts.foot.side ? h('div', { class: 'foot-side' }, opts.foot.side) : null,
     opts.foot.brand ? h('div', { class: 'foot-brand' }, icon('chef', 46), h('div', null, h('strong', null, 'Restora'), h('small', null, 'Smart Restaurant Platform'))) : null) : null;
   clear(document.body);
   document.body.append(h('div', { class: 'app' }, bar, banner, h('div', { class: 'shell' }, side, h('div', { class: 'main-col' }, view, foot))), h('div', { id: 'print-area' }));
