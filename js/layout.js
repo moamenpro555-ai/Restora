@@ -1,6 +1,6 @@
 // App shell: sidebar (filtered by permissions), topbar, theme, notifications, branding, live socket.
 const NAV = [
-  ['dashboard.html', 'لوحة التحكم', 'orders.view'], ['pos.html', 'الكاشير', 'orders.create'], ['orders.html', 'الطلبات', 'orders.view'],
+  ['dashboard.html', 'لوحة التحكم', 'orders.view'], ['pos.html', 'الكاشير', 'orders.create'], ['orders.html', 'سجل المبيعات', 'orders.view'],
   ['kitchen.html', 'المطبخ (KDS)', 'kitchen.view'], ['tables.html', 'الطاولات', 'tables.manage'], ['reservations.html', 'الحجوزات', 'reservations.manage'],
   ['products.html', 'المنتجات والتصنيفات', 'products.view'], ['inventory.html', 'المخزون والوصفات', 'inventory.manage'],
   ['customers.html', 'العملاء', 'customers.manage'], ['employees.html', 'الموظفون والصلاحيات', 'employees.manage'], ['branches.html', 'الفروع', 'branches.manage'],
@@ -172,3 +172,9 @@ const KDS = (() => {
   }
   return { allowed, start, view, button, pinned, setPinned, refresh, subscribe };
 })();
+
+// Cashier (POS) orders wait in NEW until they are paid or explicitly sent; this releases one to the kitchen (CONFIRMED).
+async function sendToKitchen(order) {
+  if (!order || order.status !== 'NEW' || order.source !== 'POS') return;
+  try { await API.patch(`/orders/${order.id}/status`, { status: 'CONFIRMED' }); } catch {}
+}

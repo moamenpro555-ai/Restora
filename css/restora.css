@@ -319,3 +319,12 @@
 @media(max-width:1500px){.pos.with-kds{grid-template-columns:minmax(0,1fr) 360px}}
 @media(max-width:1000px){.pos.with-kds{grid-template-columns:1fr}}
 .pos .pcard .pfoot .price{font-size:.95rem;padding:3px 10px}
+
+/* cash shift control in the top bar */
+.shift-chip{display:inline-flex;align-items:center;gap:10px;border-radius:99px;padding:8px 16px;font:inherit;font-weight:700;border:0;cursor:pointer;box-shadow:var(--shadow);white-space:nowrap}
+.shift-chip.warn{background:var(--primary);color:#fff;box-shadow:0 8px 18px -6px color-mix(in srgb,var(--primary) 70%,transparent)}
+.shift-chip.ok{background:#e8f7ee;color:#166534;cursor:default}[data-theme="dark"] .shift-chip.ok{background:#12301f;color:#86efac}
+.shift-chip .sc-t b{display:block;line-height:1.2;font-size:.9rem}.shift-chip .sc-t small{display:block;font-size:.72rem;font-weight:600;opacity:.85;direction:ltr;text-align:start}
+.shift-chip .sc-x{border:1px solid currentColor;background:transparent;color:inherit;border-radius:99px;padding:3px 12px;font:inherit;font-weight:700;font-size:.82rem;cursor:pointer}
+.shift-chip-wrap{display:flex;align-items:center}
+@media(max-width:700px){.shift-chip .sc-t small{display:none}}

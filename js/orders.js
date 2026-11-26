@@ -1,5 +1,5 @@
 (async () => {
-  const v = await boot('الطلبات', 'orders.view', { foot: { text: 'مع Restora .. مطعمك دائماً في المقدمة', icon: 'heart', brand: true } }); if (!v) return;
+  const v = await boot('سجل المبيعات', 'orders.view', { foot: { text: 'مع Restora .. مطعمك دائماً في المقدمة', icon: 'heart', brand: true } }); if (!v) return;
   const can = p => ME.permissions.includes(p);
   let status = '', type = '', days = 7, page = 1, rows = [], brand = null;
   const PAGE = 10;
@@ -71,7 +71,7 @@
         o.payments.length ? h('div', { class: 'muted' }, o.payments.map(p => `${p.isRefund ? 'استرداد' : 'دفع'} ${AR.method[p.method]} ${money(p.amount)}`).join(' | ')) : null,
         h('div', { class: 'row', style: 'margin-top:12px' },
           ['NEW', 'CONFIRMED', 'PREPARING'].includes(o.status) && can('orders.update') && can('products.view') ? h('button', { class: 'btn secondary', onclick: () => { m.close(); addItems(o); } }, 'إضافة أصناف') : null,
-          !closed && remaining > 0.005 && can('orders.update') ? h('button', { class: 'btn ok', onclick: async () => { const l = await collectPayment(remaining); if (l) { m.close(); act(() => API.post(`/orders/${o.id}/pay`, { payments: l })); } } }, 'تحصيل') : null,
+          !closed && remaining > 0.005 && can('orders.update') ? h('button', { class: 'btn ok', onclick: async () => { const l = await collectPayment(remaining); if (l) { m.close(); act(async () => { await API.post(`/orders/${o.id}/pay`, { payments: l }); await sendToKitchen(o); }); } } }, 'تحصيل') : null,
           paid(o) > 0 && can('orders.refund') ? h('button', { class: 'btn secondary', onclick: () => { m.close(); formModal({ title: 'استرداد', fields: [{ name: 'amount', label: 'المبلغ', type: 'number', step: '0.01', required: true }, { name: 'method', label: 'الطريقة', type: 'select', options: Object.entries(AR.method).map(([value, label]) => ({ value, label })) }, { name: 'note', label: 'السبب' }], onSubmit: async d => { await API.post(`/orders/${o.id}/refund`, d); load(); } }); } }, 'استرداد') : null,
           !closed && can('orders.cancel') ? h('button', { class: 'btn danger', onclick: async () => { if (await confirmBox('إلغاء الطلب؟')) { m.close(); act(() => API.patch(`/orders/${o.id}/status`, { status: 'CANCELLED' })); } } }, 'إلغاء') : null,
           h('button', { class: 'btn secondary', onclick: async () => { if (!brand) brand = await API.get('/settings/branding').catch(() => null); printReceipt(o, brand); } }, 'طباعة'))), { wide: false });
@@ -79,7 +79,7 @@
   }
   const PILLS = [['', 'الكل', 'grid'], ['NEW', 'جديد', 'dot', 'info'], ['CONFIRMED', 'مؤكد', 'checkc', 'info'], ['PREPARING', 'قيد التحضير', 'chef', 'warn'], ['READY', 'جاهز', 'checkc', 'ok'],
     ['OUT_FOR_DELIVERY', 'في الطريق', 'scooter', 'info'], ['COMPLETED', 'مكتمل', 'checkc', 'ok'], ['CANCELLED', 'ملغي', 'xc', 'err']];
-  v.append(pageHead('الطلبات', 'متابعة جميع طلبات مطعمك', 'bars'),
+  v.append(pageHead('سجل المبيعات', 'متابعة جميع طلبات ومبيعات مطعمك', 'bars'),
     h('div', { class: 'filters' },
       h('div', { class: 'grp' }, pillTabs(PILLS, k => { status = k; page = 1; load(); })),
       h('div', { class: 'grp' },

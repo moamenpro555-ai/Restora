@@ -56,12 +56,9 @@
     const m = modal(p.name, body);
   }
   function drawCart() {
-    clear(cartBox);
+    drawShift(); clear(cartBox);
     cartBox.append(h('div', { class: 'cart-scroll' }, h('div', { class: 'cart-head' }, h('h3', null, 'الطلب الحالي'), icon('cart', 24)),
       branches.length > 1 ? h('select', { onchange: async e => { st.branchId = e.target.value; st.table = ''; await Promise.all([loadTables(), loadRegister()]); drawCart(); } }, branches.map(b => h('option', { value: b.id, selected: b.id === st.branchId }, b.name))) : null,
-      !register
-        ? h('div', { class: 'shift-banner warn' }, h('div', { class: 'sb-text' }, icon('clock', 18), 'لا توجد وردية نقدية مفتوحة'), h('button', { class: 'btn big', onclick: openRegister }, 'فتح وردية', icon('play', 16)))
-        : h('div', { class: 'shift-banner ok' }, h('div', { class: 'sb-text' }, icon('clock', 18), 'الوردية مفتوحة منذ ' + dt(register.openedAt)), h('button', { class: 'btn secondary sm', onclick: closeRegister }, 'إغلاق الوردية')),
       h('select', { onchange: e => { st.type = e.target.value; drawCart(); } }, Object.entries(AR.type).filter(([k]) => k !== 'DINE_IN' || mods.tables !== false).filter(([k]) => k !== 'DELIVERY' || mods.delivery !== false).map(([k, n]) => h('option', { value: k, selected: k === st.type }, n))),
       st.type === 'DINE_IN' ? h('select', { onchange: e => { st.table = e.target.value; } }, h('option', { value: '' }, 'اختر الطاولة'), tables.map(x => h('option', { value: x.number, selected: x.number === st.table }, `طاولة ${x.number}${x.orders.length ? ' (مشغولة)' : ''}`))) : null,
       h('div', { class: 'two' }, h('input', { placeholder: 'اسم العميل', value: st.name, oninput: e => { st.name = e.target.value; } }), h('input', { placeholder: 'الهاتف', value: st.phone, oninput: e => { st.phone = e.target.value; } })),
@@ -98,17 +95,18 @@
       discount: st.discount || undefined, zoneId: st.type === 'DELIVERY' ? st.zoneId || undefined : undefined, tableNumber: st.type === 'DINE_IN' ? st.table : undefined,
       items: st.cart.map(l => ({ productId: l.productId, quantity: l.qty, options: l.options.map(o => ({ group: o.group, choice: o.choice })) })) };
     try {
-      let order = await API.post('/orders', body);
-      // straight to the kitchen: no manual "accept" step for orders the cashier entered
-      try { await API.patch(`/orders/${order.id}/status`, { status: 'CONFIRMED' }); order.status = 'CONFIRMED'; } catch {}
+      let order = await API.post('/orders', body), paidNow = false;
       if (payNow) {
         const lines = await collectPayment(Number(order.total));
         if (lines) {
           await API.post(`/orders/${order.id}/pay`, { payments: lines });
-          if (st.type !== 'DINE_IN' && await confirmBox('تسليم الطلب الآن وإنهاؤه؟')) await API.patch(`/orders/${order.id}/status`, { status: 'COMPLETED' });
+          await sendToKitchen(order); paidNow = true; // paid -> goes to the kitchen
         }
       }
-      toast(`تم إنشاء الطلب #${order.number} وأُرسل للمطبخ`); KDS.refresh();
+      if (!payNow) { await sendToKitchen(order); toast(`تم إرسال الطلب #${order.number} للمطبخ`); }
+      else if (order.payStatus !== 'PAID' && !paidNow) toast(`الطلب #${order.number} محفوظ بدون دفع (في سجل المبيعات) ولم يُرسل للمطبخ بعد`, true);
+      else toast(`تم الدفع وأُرسل الطلب #${order.number} للمطبخ`);
+      KDS.refresh();
       if (await confirmBox('طباعة الإيصال؟')) await printReceipt(order, brand);
       st.cart = []; st.discount = 0; st.notes = ''; st.name = ''; st.phone = ''; st.addr = ''; await loadTables(); drawCart();
     } catch (e) { fail(e); }
@@ -121,7 +119,16 @@
     tLbl.textContent = d.toLocaleDateString('ar-EG-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' });
   }
   setInterval(tick, 1000);
-  const slot = $('#bar-slot'); if (slot) slot.append(timerChip);
+  // Cash shift control lives in the top bar next to the clock.
+  const shiftBox = h('div', { class: 'shift-chip-wrap' });
+  function drawShift() {
+    clear(shiftBox);
+    shiftBox.append(!register
+      ? h('button', { class: 'shift-chip warn', onclick: openRegister, title: 'لا توجد وردية نقدية مفتوحة' }, icon('play', 18), 'فتح وردية')
+      : h('div', { class: 'shift-chip ok' }, icon('clock', 18), h('div', { class: 'sc-t' }, h('b', null, 'الوردية مفتوحة'), h('small', null, 'منذ ' + dt(register.openedAt))),
+        h('button', { class: 'sc-x', onclick: closeRegister }, 'إغلاق')));
+  }
+  const slot = $('#bar-slot'); if (slot) slot.append(shiftBox, timerChip);
   clear(v);
   v.append(h('div', { class: 'pos' }, h('div', { class: 'pos-products' }, h('div', { class: 'search' }, h('input', { placeholder: 'ابحث عن منتج...', oninput: e => { st.q = e.target.value; drawProducts(); } }), h('span', { class: 'search-ico' }, icon('search', 20))), catBar, grid), cartBox));
   drawProducts(); drawCart();
