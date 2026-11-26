@@ -22,42 +22,42 @@ async function printReceipt(order, brand) {
   const pa = $('#print-area'); clear(pa);
   const t = (ME && ME.tenant) || {};
   const cur = t.currency || 'EGP';
-  const n = x => Number(x || 0).toFixed(2);
-  const row = (a, b, cls) => h('div', { class: 'r-row' + (cls ? ' ' + cls : '') }, h('span', null, a), h('span', null, b));
+  const n = x => Number(x || 0).toFixed(2) + ' ' + cur;
+  const row = (a, b) => h('div', { class: 'r-row' }, h('span', null, a), h('span', null, b));
   const tableNo = order.table && order.table.number;
-  const paid = (order.payments || []).filter(p => !p.isRefund);
-  pa.append(h('div', { class: 'rcpt' },
-    h('div', { class: 'r-head' },
-      brand && brand.logoUrl ? h('img', { class: 'r-logo', src: brand.logoUrl, alt: '' }) : null,
-      h('h1', { class: 'r-name' }, t.name || ''),
-      brand && brand.address ? h('div', { class: 'r-sub' }, brand.address) : null,
-      brand && brand.phone ? h('div', { class: 'r-sub', style: 'direction:ltr' }, brand.phone) : null),
-    h('hr', { class: 'r-sep' }),
-    h('div', { class: 'r-meta' }, h('span', null, 'طلب #' + order.number), h('span', null, AR.type[order.type] || '')),
-    h('div', { class: 'r-meta' }, h('span', null, dt(order.createdAt)), tableNo ? h('span', null, 'طاولة ' + tableNo) : h('span')),
-    order.customerName ? h('div', { class: 'r-meta' }, h('span', null, 'العميل: ' + order.customerName), order.customerPhone ? h('span', { style: 'direction:ltr' }, order.customerPhone) : h('span')) : null,
-    order.deliveryAddress ? h('div', { class: 'r-sub' }, 'العنوان: ' + order.deliveryAddress) : null,
-    h('hr', { class: 'r-sep' }),
-    h('table', null,
-      h('thead', null, h('tr', null, h('th', null, 'الصنف'), h('th', { class: 'c-q' }, 'الكمية'), h('th', { class: 'c-p' }, 'السعر'))),
-      h('tbody', null, (order.items || []).map(i => h('tr', null,
-        h('td', null, i.name,
-          Array.isArray(i.options) && i.options.length ? h('div', { class: 'r-opt' }, i.options.map(o => o.choice).join('، ')) : null,
-          i.notes ? h('div', { class: 'r-opt' }, i.notes) : null),
-        h('td', { class: 'c-q' }, i.quantity),
-        h('td', { class: 'c-p' }, n(Number(i.unitPrice) * i.quantity)))))),
-    h('hr', { class: 'r-sep solid' }),
-    row('المجموع', n(order.subtotal)),
-    Number(order.discount) ? row('خصم', '-' + n(order.discount)) : null,
-    Number(order.tax) ? row('ضريبة', n(order.tax)) : null,
-    Number(order.deliveryFee) ? row('توصيل', n(order.deliveryFee)) : null,
-    row('الإجمالي', `${n(order.total)} ${cur}`, 'r-total'),
-    paid.length ? h('div', { style: 'margin-top:4px' }, paid.map(p => row(AR.method[p.method] || p.method, n(p.amount)))) : null,
-    h('hr', { class: 'r-sep' }),
-    h('div', { class: 'r-foot' }, (brand && brand.receiptFooter) || 'شكرًا لزيارتكم')));
+  const taxRate = Number((t.modules && t.modules.taxRate) || 0);
+  const chips = [AR.type[order.type], tableNo ? 'طاولة ' + tableNo : null, order.customerName ? 'العميل: ' + order.customerName : null,
+    order.customerPhone || null, order.deliveryAddress ? 'العنوان: ' + order.deliveryAddress : null].filter(Boolean);
+  pa.append(h('div', { class: 'rcpt' }, h('div', { class: 'r-corner' }),
+    h('div', { class: 'r-body' },
+      h('div', { class: 'r-head' },
+        h('div', { class: 'r-info' }, h('span', { class: 'r-badge' }, '#' + order.number), h('div', { style: 'margin-top:4px' }, dt(order.createdAt))),
+        h('div', { class: 'r-brand' },
+          h('div', null, h('h1', { class: 'r-name' }, t.name || ''),
+            brand && (brand.address || brand.phone) ? h('div', { class: 'r-sub' }, [brand.address, brand.phone].filter(Boolean).join(' • ')) : null),
+          brand && brand.logoUrl ? h('img', { class: 'r-logo', src: brand.logoUrl, alt: '' }) : h('div', { class: 'r-logo' }, icon('chef', 40)))),
+      chips.length ? h('div', { class: 'r-chips' }, chips.map(c => h('span', null, c))) : null,
+      h('table', null,
+        h('thead', null, h('tr', null, h('th', { class: 'c-n' }, 'الصنف'), h('th', { class: 'c-q' }, 'الكمية'), h('th', null, 'سعر الوحدة'), h('th', null, 'الإجمالي'))),
+        h('tbody', null, (order.items || []).map(i => h('tr', null,
+          h('td', null, i.name,
+            Array.isArray(i.options) && i.options.length ? h('div', { class: 'r-opt' }, i.options.map(o => o.choice).join('، ')) : null,
+            i.notes ? h('div', { class: 'r-opt' }, i.notes) : null),
+          h('td', null, i.quantity),
+          h('td', { class: 'num' }, n(i.unitPrice)),
+          h('td', { class: 'num' }, n(Number(i.unitPrice) * i.quantity)))))),
+      h('div', { class: 'r-sums' },
+        row('المجموع الفرعي', n(order.subtotal)),
+        Number(order.discount) ? row('خصم', '-' + n(order.discount)) : null,
+        Number(order.tax) ? row('الضريبة' + (taxRate ? ` (${taxRate}%)` : ''), n(order.tax)) : null,
+        Number(order.deliveryFee) ? row('توصيل', n(order.deliveryFee)) : null),
+      h('div', { class: 'r-total' }, h('span', null, 'الإجمالي الكلي'), h('span', null, n(order.total))),
+      h('div', { class: 'r-thanks' }, 'شكراً لاختياركم ' + (t.name || '')),
+      h('div', { class: 'r-heart' }, h('i'), h('span', null, '♥'), h('i'))),
+    h('div', { class: 'r-bar' }, (brand && brand.receiptFooter) || 'نتمنى لكم وجبة شهية')));
   // The browser prints document.title in the page header: use the restaurant name, not the platform name.
   const oldTitle = document.title; document.title = t.name || oldTitle;
   const restore = () => { document.title = oldTitle; window.removeEventListener('afterprint', restore); };
   window.addEventListener('afterprint', restore);
-  setTimeout(() => window.print(), 100);
+  setTimeout(() => window.print(), 150);
 }
