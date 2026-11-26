@@ -57,7 +57,7 @@
   }
   function drawCart() {
     clear(cartBox);
-    cartBox.append(h('div', { class: 'cart-head' }, h('h3', null, 'الطلب الحالي'), icon('cart', 24)),
+    cartBox.append(h('div', { class: 'cart-scroll' }, h('div', { class: 'cart-head' }, h('h3', null, 'الطلب الحالي'), icon('cart', 24)),
       branches.length > 1 ? h('select', { onchange: async e => { st.branchId = e.target.value; st.table = ''; await Promise.all([loadTables(), loadRegister()]); drawCart(); } }, branches.map(b => h('option', { value: b.id, selected: b.id === st.branchId }, b.name))) : null,
       !register
         ? h('div', { class: 'shift-banner warn' }, h('div', { class: 'sb-text' }, icon('clock', 18), 'لا توجد وردية نقدية مفتوحة'), h('button', { class: 'btn big', onclick: openRegister }, 'فتح وردية', icon('play', 16)))
@@ -73,9 +73,9 @@
         : h('div', { class: 'empty-cart' }, h('div', { class: 'ec-ico' }, icon('cart', 44)), h('strong', null, 'لم يتم إضافة أي أصناف بعد'), h('small', null, 'اختر المنتجات من القائمة لإضافتها إلى الطلب')),
       h('input', { type: 'number', min: '0', placeholder: 'خصم (مبلغ)', value: st.discount || '', oninput: e => { st.discount = Number(e.target.value); drawTotals(); } }),
       h('input', { placeholder: 'ملاحظات', value: st.notes, oninput: e => { st.notes = e.target.value; } }),
-      totalsBox,
+    ), h('div', { class: 'cart-foot' }, totalsBox,
       h('button', { class: 'btn checkout', disabled: !st.cart.length, onclick: () => submit(true) }, icon('card', 20), 'إتمام الطلب والدفع'),
-      h('button', { class: 'btn secondary send', disabled: !st.cart.length, onclick: () => submit(false) }, 'إرسال بدون دفع'));
+      h('button', { class: 'btn secondary send', disabled: !st.cart.length, onclick: () => submit(false) }, 'إرسال بدون دفع')));
     drawTotals(); tick();
   }
   const totalsBox = h('div', { class: 'totals' });

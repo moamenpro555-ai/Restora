@@ -314,3 +314,8 @@
 @media(max-width:700px){.kds-pop{position:fixed;top:76px;inset-inline:4vw;width:auto}}
 .kv-pin{color:var(--text)}.kv-pin svg{color:currentColor;stroke:currentColor}.kv-pin.on,.kv-pin.on svg{color:#fff!important}
 .app .topbar{z-index:60}
+
+.pos.with-kds{grid-template-columns:minmax(0,1fr) 360px 310px}
+@media(max-width:1500px){.pos.with-kds{grid-template-columns:minmax(0,1fr) 360px}}
+@media(max-width:1000px){.pos.with-kds{grid-template-columns:1fr}}
+.pos .pcard .pfoot .price{font-size:.95rem;padding:3px 10px}
