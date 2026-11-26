@@ -121,11 +121,11 @@ function formModal({ title, fields, values = {}, submitText = 'حفظ', onSubmit
   const m = modal(title, form, { wide });
   return m;
 }
-function dataTable(cols, rows, emptyMsg = 'لا توجد بيانات') {
+function dataTable(cols, rows, emptyMsg = 'لا توجد بيانات', cls = '') {
   if (!rows || !rows.length) return h('div', { class: 'card empty' }, emptyMsg);
-  return h('div', { class: 'table-wrap' }, h('table', null,
-    h('thead', null, h('tr', null, cols.map(c => h('th', null, c.label)))),
-    h('tbody', null, rows.map(r => h('tr', null, cols.map(c => h('td', null, c.render ? c.render(r) : (r[c.key] ?? '-'))))))));
+  return h('div', { class: 'table-wrap' + (cls ? ' ' + cls : '') }, h('table', null,
+    h('thead', null, h('tr', null, cols.map(c => h('th', { class: c.cls || '' }, c.label)))),
+    h('tbody', null, rows.map(r => h('tr', null, cols.map(c => h('td', { class: c.cls || '' }, c.render ? c.render(r) : (r[c.key] ?? '-'))))))));
 }
 function tabs(items, onChange, active) {
   const wrap = h('div', { class: 'tabs' });
@@ -175,7 +175,36 @@ const ICONS = {
   chevron: 'M6 9l6 6 6-6',
   logout: 'M9 4H5a1 1 0 00-1 1v14a1 1 0 001 1h4M16 8l4 4-4 4M20 12H9',
   stop: 'M7 7h10v10H7z',
-  note: 'M5 4h14v12H9l-4 4V4z'
+  note: 'M5 4h14v12H9l-4 4V4z',
+  eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 100-6 3 3 0 000 6z',
+  filter: 'M3 5h18l-7 8v6l-4-2v-4L3 5z',
+  check: 'M5 12l5 5 9-10',
+  checkc: 'M12 21a9 9 0 100-18 9 9 0 000 18zM8 12l3 3 5-6',
+  xc: 'M12 21a9 9 0 100-18 9 9 0 000 18zM9 9l6 6M15 9l-6 6',
+  flame: 'M12 3c1 4 5 5 5 10a5 5 0 01-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z',
+  utensils: 'M7 3v8M5 3v5a2 2 0 004 0V3M7 11v10M17 3c-2 1-3 4-3 7h3v11M17 3v18',
+  scooter: 'M5 19a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM19 19a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM7.5 16.5H13l2-8h3M12 8.5h3M8 5h3',
+  bag: 'M5 8h14l-1 12H6L5 8zM9 8a3 3 0 016 0',
+  phone: 'M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z',
+  trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
+  edit: 'M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4',
+  doc: 'M7 3h7l4 4v14H7V3zM14 3v4h4M10 12h5M10 16h5',
+  chevl: 'M15 6l-6 6 6 6',
+  chevr: 'M9 6l6 6-6 6',
+  dchevl: 'M11 6l-6 6 6 6M19 6l-6 6 6 6',
+  dchevr: 'M13 6l6 6-6 6M5 6l6 6-6 6',
+  arrowl: 'M19 12H5M11 6l-6 6 6 6',
+  arrowr: 'M5 12h14M13 6l6 6-6 6',
+  heart: 'M12 20s-7-4.5-7-10a4 4 0 017-2.5A4 4 0 0119 10c0 5.5-7 10-7 10z',
+  bulb: 'M9 18h6M10 21h4M12 3a6 6 0 00-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0012 3z',
+  timer: 'M12 21a8 8 0 100-16 8 8 0 000 16zM12 9v4l2 2M9 2h6',
+  refresh: 'M20 11a8 8 0 10-2 6M20 4v7h-7',
+  db: 'M4 6c0-1.5 3.6-3 8-3s8 1.5 8 3-3.6 3-8 3-8-1.5-8-3zM4 6v6c0 1.5 3.6 3 8 3s8-1.5 8-3V6M4 12v6c0 1.5 3.6 3 8 3s8-1.5 8-3v-6',
+  dots: 'M12 5h.01M12 12h.01M12 19h.01',
+  menu: 'M4 6h16M4 12h16M4 18h16',
+  person: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0',
+  x: 'M6 6l12 12M18 6L6 18',
+  expand: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'
 };
 function icon(name, size = 20) {
   const NS = 'http://www.w3.org/2000/svg';
@@ -183,4 +212,51 @@ function icon(name, size = 20) {
   for (const [k, v] of Object.entries({ viewBox: '0 0 24 24', width: size, height: size, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true', class: 'ico' })) svg.setAttribute(k, v);
   const path = document.createElementNS(NS, 'path'); path.setAttribute('d', ICONS[name] || ICONS.grid); svg.appendChild(path);
   return svg;
+}
+
+// ---- Restora shared UI helpers ----
+// Page header: orange icon + bold title + muted subtitle on the start side, actions on the end side.
+function pageHead(title, sub, ico, actions) {
+  return h('div', { class: 'ph' },
+    h('div', { class: 'ph-t' }, h('h1', null, h('span', { class: 'ph-ico' }, icon(ico || 'grid', 28)), title), sub ? h('p', { class: 'muted' }, sub) : null),
+    actions ? h('div', { class: 'ph-act' }, actions) : null);
+}
+// Rounded status chip with an optional leading icon or dot. tone: ok|warn|err|info|neutral|dark
+function chip(label, tone, ico) {
+  return h('span', { class: 'chip ' + (tone || 'neutral') }, ico === 'dot' ? h('i', { class: 'dot' }) : ico ? icon(ico, 15) : null, label);
+}
+// Filter pill (orders / tables / kitchen). `on` marks the active pill; `ico` is an icon name, 'dot' or null.
+function pill(label, { on = false, ico = null, tone = '', onclick } = {}) {
+  return h('button', { type: 'button', class: 'fpill' + (on ? ' on' : '') + (tone ? ' t-' + tone : ''), onclick }, ico === 'dot' ? h('i', { class: 'dot' }) : ico ? icon(ico, 17) : null, label);
+}
+// Row of filter pills that keeps its own active state. items: [[key,label,ico,tone]]
+function pillTabs(items, onChange, active) {
+  const wrap = h('div', { class: 'fpills' });
+  const draw = cur => { clear(wrap); items.forEach(([k, label, ico, tone]) => wrap.append(pill(label, { on: k === cur, ico, tone, onclick: () => { draw(k); onChange(k); } }))); };
+  draw(active === undefined ? items[0][0] : active); return wrap;
+}
+// Select styled as a rounded dropdown pill with a leading icon.
+function selectPill(ico, options, value, onChange) {
+  const sel = h('select', { onchange: e => onChange(e.target.value) }, options.map(([v, l]) => h('option', { value: v, selected: String(v) === String(value) }, l)));
+  return h('label', { class: 'selpill' }, ico ? icon(ico, 18) : null, sel);
+}
+// Search box with a trailing magnifier.
+function searchBox(placeholder, onInput) {
+  return h('label', { class: 'searchbox' }, h('input', { type: 'search', placeholder, oninput: e => onInput(e.target.value) }), icon('search', 20));
+}
+// Summary stat card (reservations / products). tone: blue|green|orange|red|purple
+function statCard(tone, ico, label, value) {
+  const wave = '<svg viewBox="0 0 120 30" preserveAspectRatio="none"><path d="M0 24 C20 8 35 26 60 16 S100 6 120 14 L120 30 L0 30Z" fill="currentColor" fill-opacity=".12"/><path d="M0 24 C20 8 35 26 60 16 S100 6 120 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+  const w = h('span', { class: 'st-wave' }); w.innerHTML = wave; // static markup, no user data
+  return h('div', { class: 'stat ' + tone }, h('div', { class: 'st-tx' }, h('div', { class: 'st-l' }, label), h('div', { class: 'st-v' }, value)), h('span', { class: 'st-ic' }, icon(ico, 28)), w);
+}
+// Pager laid out left-to-right like the design: [‹] 1 2 3 [›]. Calls onPage(n).
+function pager(total, size, page, onPage, label) {
+  const pages = Math.max(1, Math.ceil(total / size));
+  const nums = []; for (let i = 1; i <= pages; i++) if (i === 1 || i === pages || Math.abs(i - page) <= 1) nums.push(i);
+  const btn = (on, ic, to, off) => h('button', { type: 'button', class: 'pg' + (on ? ' on' : ''), disabled: off, onclick: () => onPage(to) }, ic ? icon(ic, 18) : String(to));
+  const out = [btn(false, 'dchevl', 1, page <= 1)];
+  let prev = 0; for (const n of nums) { if (n - prev > 1) out.push(h('span', { class: 'pg-gap' }, '…')); out.push(btn(n === page, null, n)); prev = n; }
+  out.push(btn(false, 'dchevr', pages, page >= pages));
+  return h('div', { class: 'pager' }, h('div', { class: 'pg-info' }, icon('db', 18), label), h('div', { class: 'pg-btns' }, out));
 }

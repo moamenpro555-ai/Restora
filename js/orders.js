@@ -1,23 +1,42 @@
 (async () => {
-  const v = await boot('الطلبات', 'orders.view'); if (!v) return;
+  const v = await boot('الطلبات', 'orders.view', { foot: { text: 'مع Restora .. مطعمك دائماً في المقدمة', icon: 'heart', brand: true } }); if (!v) return;
   const can = p => ME.permissions.includes(p);
-  let status = '', brand = null;
+  let status = '', type = '', days = 7, page = 1, rows = [], brand = null;
+  const PAGE = 10;
   const list = h('div');
   const NEXT = o => ({ NEW: 'CONFIRMED', CONFIRMED: 'PREPARING', PREPARING: 'READY', READY: o.type === 'DELIVERY' ? 'OUT_FOR_DELIVERY' : 'COMPLETED', OUT_FOR_DELIVERY: 'COMPLETED' }[o.status]);
   const paid = o => (o.payments || []).reduce((s, p) => s + (p.isRefund ? -1 : 1) * Number(p.amount), 0);
+  const TYPE_ICO = { DINE_IN: 'utensils', TAKEAWAY: 'bag', DELIVERY: 'scooter' };
+  const ST_CHIP = { NEW: ['info', 'dot'], CONFIRMED: ['info', 'checkc'], PREPARING: ['warn', 'dot'], READY: ['ok', 'checkc'], OUT_FOR_DELIVERY: ['info', 'scooter'], COMPLETED: ['ok', 'checkc'], CANCELLED: ['err', 'xc'] };
+  const pad = n => String(n).padStart(2, '0');
+  const dateStr = d => `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}`;
+  const timeStr = d => d.toLocaleTimeString('ar-EG-u-nu-latn', { hour: '2-digit', minute: '2-digit' });
+  const payChip = o => {
+    const last = (o.payments || []).filter(p => !p.isRefund).slice(-1)[0];
+    const tone = { PAID: 'ok', PARTIAL: 'warn', UNPAID: 'warn', REFUNDED: 'err' }[o.payStatus] || 'warn';
+    return chip(o.payStatus === 'PAID' && last ? AR.method[last.method] : AR.pay[o.payStatus], tone, 'card');
+  };
   async function act(fn) { try { await fn(); await load(); } catch (e) { fail(e); } }
+  function draw() {
+    clear(list);
+    const filtered = rows.filter(r => !type || r.type === type);
+    const pages = Math.max(1, Math.ceil(filtered.length / PAGE)); if (page > pages) page = pages;
+    const slice = filtered.slice((page - 1) * PAGE, page * PAGE);
+    const table = dataTable([
+      { label: '#', render: r => r.number }, { label: 'المصدر', render: r => chip(AR.source[r.source], 'dark', 'store') },
+      { label: 'النوع', render: r => h('span', { class: 'ic-line' }, icon(TYPE_ICO[r.type] || 'utensils', 18), AR.type[r.type] + (r.table ? ' - ' + r.table.number : '')) },
+      { label: 'العميل', render: r => r.customerName || '-' },
+      { label: 'الحالة', render: r => chip(AR.status[r.status], ST_CHIP[r.status][0], ST_CHIP[r.status][1]) }, { label: 'الدفع', render: r => payChip(r) },
+      { label: 'الإجمالي', render: r => h('span', { class: 'ltr' }, money(r.total)) },
+      { label: 'الوقت', render: r => { const d = new Date(r.scheduledFor || r.createdAt); return h('div', null, h('span', { class: 'ic-line ltr' }, icon('clock', 16), timeStr(d)), h('span', { class: 'sub ltr' }, dateStr(d)), r.scheduledFor ? chip('مجدول', 'warn') : null); } },
+      { label: 'تفاصيل', render: r => h('div', { class: 'act-row' }, h('button', { class: 'btn detail', onclick: () => details(r.id) }, icon('eye', 18), 'تفاصيل'),
+        NEXT(r) && can('orders.update') ? h('button', { class: 'btn next-btn', onclick: () => act(() => API.patch(`/orders/${r.id}/status`, { status: NEXT(r) })) }, AR.status[NEXT(r)]) : null) }], slice, 'لا توجد طلبات', 'rt');
+    list.append(h('div', { class: 'tbl-card' }, table, filtered.length ? pager(filtered.length, PAGE, page, n => { page = n; draw(); }, `إجمالي الطلبات: ${filtered.length} ${filtered.length === 1 ? 'طلب' : 'طلبات'}`) : null));
+  }
   async function load() {
     clear(list); list.append(loading());
-    try {
-      const rows = await API.get('/orders' + qs({ status }));
-      clear(list);
-      list.append(dataTable([
-        { label: '#', render: r => r.number }, { label: 'المصدر', render: r => AR.source[r.source] }, { label: 'النوع', render: r => AR.type[r.type] + (r.table ? ' - ' + r.table.number : '') },
-        { label: 'العميل', render: r => r.customerName || '-' }, { label: 'الحالة', render: r => statusBadge(r.status) }, { label: 'الدفع', render: r => statusBadge(r.payStatus) },
-        { label: 'الإجمالي', render: r => money(r.total) }, { label: 'الوقت', render: r => r.scheduledFor ? h('span', { class: 'badge warn' }, 'مجدول: ' + dt(r.scheduledFor)) : dt(r.createdAt) },
-        { label: '', render: r => h('div', { class: 'row' }, h('button', { class: 'btn sm secondary', onclick: () => details(r.id) }, 'تفاصيل'),
-          NEXT(r) && can('orders.update') ? h('button', { class: 'btn sm', onclick: () => act(() => API.patch(`/orders/${r.id}/status`, { status: NEXT(r) })) }, AR.status[NEXT(r)]) : null) }], rows, 'لا توجد طلبات'));
-    } catch (e) { clear(list); list.append(h('div', { class: 'card empty' }, e.message)); }
+    try { rows = await API.get('/orders' + qs({ status, ...(days ? rangeBounds(days) : {}) })); draw(); }
+    catch (e) { clear(list); list.append(h('div', { class: 'card empty' }, e.message)); }
   }
   // Add items to an open order (server re-prices everything).
   async function addItems(o) {
@@ -58,7 +77,15 @@
           h('button', { class: 'btn secondary', onclick: async () => { if (!brand) brand = await API.get('/settings/branding').catch(() => null); printReceipt(o, brand); } }, 'طباعة'))), { wide: false });
     } catch (e) { fail(e); }
   }
-  v.append(tabs([['', 'الكل'], ...Object.entries(AR.status)], k => { status = k; load(); }), list);
+  const PILLS = [['', 'الكل', 'grid'], ['NEW', 'جديد', 'dot', 'info'], ['CONFIRMED', 'مؤكد', 'checkc', 'info'], ['PREPARING', 'قيد التحضير', 'chef', 'warn'], ['READY', 'جاهز', 'checkc', 'ok'],
+    ['OUT_FOR_DELIVERY', 'في الطريق', 'scooter', 'info'], ['COMPLETED', 'مكتمل', 'checkc', 'ok'], ['CANCELLED', 'ملغي', 'xc', 'err']];
+  v.append(pageHead('الطلبات', 'متابعة جميع طلبات مطعمك', 'bars'),
+    h('div', { class: 'filters' },
+      h('div', { class: 'grp' }, pillTabs(PILLS, k => { status = k; page = 1; load(); })),
+      h('div', { class: 'grp' },
+        selectPill('filter', [['', 'الكل'], ...Object.entries(AR.type)], type, k => { type = k; page = 1; draw(); }),
+        selectPill('calendar', [[1, 'اليوم'], [7, 'آخر 7 أيام'], [30, 'آخر 30 يوم'], [0, 'كل الوقت']], days, k => { days = Number(k); page = 1; load(); }))),
+    list);
   connectSocket({ 'order:new': () => { toast('طلب جديد'); load(); }, 'order:status': load });
   load();
   if (location.hash.length > 1) details(decodeURIComponent(location.hash.slice(1)));
