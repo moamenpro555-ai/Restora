@@ -31,7 +31,6 @@
       h('div', { class: 'tbl-card' }, dataTable([
         { label: 'الاسم', cls: 'start', key: 'name' }, { label: 'الوظيفة', render: u => u.jobTitle || '-' }, { label: 'الهاتف', render: u => u.phone ? h('span', { class: 'ltr' }, u.phone) : '-' },
         { label: 'الفرع', render: u => (branches.find(b => b.id === u.branchId) || {}).name || 'كل الفروع' },
-        { label: 'الراتب', render: u => u.salary != null ? h('span', { class: 'ltr' }, money(u.salary)) : '-' },
         { label: 'الحالة', render: u => chip(u.isActive ? 'نشط' : 'موقوف', u.isActive ? 'ok' : 'err') },
         { label: 'إجراءات', render: u => h('div', { class: 'act-row' },
           h('button', { class: 'ibtn orange', title: 'تعديل', onclick: () => staffForm(u) }, icon('edit', 18)),
@@ -54,11 +53,11 @@
     fields: [{ name: 'name', label: 'الاسم', required: true }, ...(u ? [] : [{ name: 'email', label: 'البريد', type: 'email', required: true }, { name: 'password', label: 'كلمة المرور (8+)', type: 'password', required: true }]),
       { name: 'roleId', label: 'الدور', type: 'select', options: roleOpts(), required: true }, { name: 'branchId', label: 'الفرع', type: 'select', options: brOpts() }],
     onSubmit: async d => { const b = { ...d, branchId: d.branchId || null }; if (u) await API.patch('/employees/' + u.id, { name: b.name, roleId: b.roleId, branchId: b.branchId }); else await API.post('/employees', b); load(); } });
-  const staffForm = u => formModal({ title: u ? 'تعديل موظف' : 'موظف جديد (بدون حساب)', values: u ? { ...u, branchId: u.branchId || '', hiredAt: u.hiredAt ? String(u.hiredAt).slice(0, 10) : '', salary: u.salary != null ? Number(u.salary) : '' } : {},
+  const staffForm = u => formModal({ title: u ? 'تعديل موظف' : 'موظف جديد (بدون حساب)', values: u ? { ...u, branchId: u.branchId || '', hiredAt: u.hiredAt ? String(u.hiredAt).slice(0, 10) : '' } : {},
     fields: [{ name: 'name', label: 'الاسم', required: true }, { name: 'jobTitle', label: 'الوظيفة (مثال: شيف، كاشير، عامل توصيل)' }, { name: 'phone', label: 'الهاتف' },
-      { name: 'branchId', label: 'الفرع', type: 'select', options: brOpts() }, { name: 'salary', label: 'الراتب', type: 'number', step: '0.01', min: '0' }, { name: 'hiredAt', label: 'تاريخ التعيين', type: 'date' },
+      { name: 'branchId', label: 'الفرع', type: 'select', options: brOpts() }, { name: 'hiredAt', label: 'تاريخ التعيين', type: 'date' },
       { name: 'notes', label: 'ملاحظات', type: 'textarea' }],
-    onSubmit: async d => { const b = { name: d.name, jobTitle: d.jobTitle || null, phone: d.phone || null, branchId: d.branchId || null, salary: d.salary === undefined || d.salary === '' ? null : Number(d.salary), hiredAt: d.hiredAt || null, notes: d.notes || null };
+    onSubmit: async d => { const b = { name: d.name, jobTitle: d.jobTitle || null, phone: d.phone || null, branchId: d.branchId || null, hiredAt: d.hiredAt || null, notes: d.notes || null };
       if (u) await API.patch('/employees/staff/' + u.id, b); else await API.post('/employees/staff', b); load(); } });
   const pw = u => formModal({ title: 'كلمة مرور جديدة: ' + u.name, fields: [{ name: 'password', label: 'كلمة المرور (8+)', type: 'password', required: true }], onSubmit: async d => { await API.post(`/employees/${u.id}/reset-password`, d); toast('تم التغيير'); } });
   const roleForm = r => formModal({ title: r ? 'تعديل الدور' : 'دور جديد', wide: true, values: r || { permissions: [] }, fields: [{ name: 'name', label: 'اسم الدور', required: true }, { name: 'permissions', label: 'الصلاحيات', type: 'multicheck', options: allPerms.filter(p => ME.permissions.includes(p)).map(p => ({ value: p, label: PL[p] || p })) }],
