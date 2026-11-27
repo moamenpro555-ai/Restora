@@ -54,3 +54,7 @@
 [data-theme="dark"] .pcard .price{color:#fdba74;background:rgba(249,115,22,.15)}
 .cart-line .muted+*,.cart-line span{direction:ltr;unicode-bidi:isolate}
 .totals,.totals div span:last-child{font-variant-numeric:tabular-nums}
+
+.cust-res{display:flex;flex-direction:column;gap:4px;margin-top:4px}
+.cust-item{display:block;text-align:start;width:100%;padding:8px 10px;border:1px solid var(--border,#e5e7eb);border-radius:10px;background:var(--surface,#fff);cursor:pointer;font:inherit;color:inherit}
+.cust-item:hover{border-color:var(--primary,#d97706)}

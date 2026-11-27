@@ -60,12 +60,29 @@
     formModal({ title: 'ملاحظة على: ' + l.name, values: { notes: l.notes || '' }, fields: [{ name: 'notes', label: 'الملاحظة (تظهر للمطبخ)', type: 'textarea' }],
       onSubmit: async d => { l.notes = (d.notes || '').trim() || undefined; drawCart(); } });
   }
+  function custSearch() { // look up a customer already saved in the customers list and fill the delivery details
+    const res = h('div', { class: 'cust-res' }); let t;
+    const pick = c => { st.name = c.name; st.phone = c.phone; st.addr = c.address || ''; st.zoneId = c.zoneId && zones.some(z => z.id === c.zoneId) ? c.zoneId : ''; drawCart(); toast('تم تحديد العميل'); };
+    const input = h('input', { placeholder: 'بحث عن عميل (بالاسم أو الهاتف)...', oninput: e => {
+      clearTimeout(t); const q = e.target.value.trim();
+      if (q.length < 2) { clear(res); return; }
+      t = setTimeout(async () => {
+        try {
+          const rows = await API.get('/customers/lookup' + qs({ q })); clear(res);
+          if (!rows.length) res.append(h('div', { class: 'muted' }, 'لا يوجد عميل بهذا البحث - أدخل بياناته بالأسفل وسيُسجّل تلقائيًا'));
+          rows.forEach(c => res.append(h('button', { type: 'button', class: 'cust-item', onclick: () => pick(c) }, h('strong', null, c.name), h('span', { class: 'ltr muted' }, ' ' + c.phone), c.address ? h('small', { class: 'muted' }, ' — ' + c.address) : null)));
+        } catch {}
+      }, 300);
+    } });
+    return h('div', null, input, res);
+  }
   function drawCart() {
     drawShift(); clear(cartBox);
     cartBox.append(h('div', { class: 'cart-scroll' }, h('div', { class: 'cart-head' }, h('h3', null, 'الطلب الحالي'), icon('cart', 24)),
       branches.length > 1 ? h('select', { onchange: async e => { st.branchId = e.target.value; st.table = ''; await Promise.all([loadTables(), loadRegister()]); drawCart(); } }, branches.map(b => h('option', { value: b.id, selected: b.id === st.branchId }, b.name))) : null,
       h('select', { onchange: e => { st.type = e.target.value; drawCart(); } }, Object.entries(AR.type).filter(([k]) => k !== 'DINE_IN' || mods.tables !== false).filter(([k]) => k !== 'DELIVERY' || mods.delivery !== false).map(([k, n]) => h('option', { value: k, selected: k === st.type }, n))),
       st.type === 'DINE_IN' ? h('select', { onchange: e => { st.table = e.target.value; } }, h('option', { value: '' }, 'اختر الطاولة'), tables.map(x => h('option', { value: x.number, selected: x.number === st.table }, `طاولة ${x.number}${x.orders.length ? ' (مشغولة)' : ''}`))) : null,
+      st.type === 'DELIVERY' ? custSearch() : null,
       h('div', { class: 'two' }, h('input', { placeholder: 'اسم العميل', value: st.name, oninput: e => { st.name = e.target.value; } }), h('input', { placeholder: 'الهاتف', value: st.phone, oninput: e => { st.phone = e.target.value; } })),
       st.type === 'DELIVERY' ? h('input', { placeholder: 'عنوان التوصيل', value: st.addr, oninput: e => { st.addr = e.target.value; } }) : null,
       st.type === 'DELIVERY' ? h('div', null, h('label', { class: 'sec' }, 'المنطقة'), h('select', { onchange: e => { st.zoneId = e.target.value; drawTotals(); } }, h('option', { value: '' }, zones.length ? 'اختر المنطقة (أو الرسوم الافتراضية)' : 'لا توجد مناطق - أضفها من الإعدادات'), zones.map(z => h('option', { value: z.id, selected: z.id === st.zoneId }, `${z.name} - ${money(z.fee)}`)))) : null,
