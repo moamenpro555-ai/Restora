@@ -46,6 +46,20 @@
   const link = location.href.replace(/[^/]*$/, '') + 'menu.html?restaurant=' + encodeURIComponent(g.slug); const qrBox = h('div');
   const pw = h('form', { class: 'card', onsubmit: async e => { e.preventDefault(); try { await API.post('/auth/change-password', { current: e.target.cur.value, next: e.target.nxt.value }); toast('تم تغيير كلمة المرور'); e.target.reset(); } catch (err) { fail(err); } } },
     h('h3', null, 'تغيير كلمة المرور'), h('input', { name: 'cur', type: 'password', placeholder: 'الحالية', required: true }), h('input', { name: 'nxt', type: 'password', placeholder: 'الجديدة (8+)', minlength: 8, required: true }), h('button', { class: 'btn' }, 'تغيير'));
+  // Owner only: the password required to delete orders from the sales log
+  const isOwner = ME.role === 'Owner';
+  const dpState = h('p', { class: 'muted' }, '...');
+  const dpForm = h('form', { class: 'card', onsubmit: async e => {
+    e.preventDefault();
+    try { await API.put('/settings/delete-password', { current: e.target.cur.value, password: e.target.pw.value }); toast('تم حفظ باسورد حذف الطلبات'); e.target.reset(); dpLoad(); } catch (err) { fail(err); }
+  } },
+    h('h3', null, 'باسورد حذف الطلبات'), h('p', { class: 'muted' }, 'لا يمكن حذف أي طلب من سجل المبيعات إلا بإدخال هذا الباسورد. شاركه فقط مع من تثق بهم.'), dpState,
+    h('input', { name: 'cur', type: 'password', placeholder: 'كلمة مرور حسابك (للتأكيد)', required: true, autocomplete: 'current-password' }),
+    h('input', { name: 'pw', type: 'password', placeholder: 'باسورد الحذف الجديد (4+)', minlength: 4, required: true, autocomplete: 'new-password' }),
+    h('div', { class: 'row' }, h('button', { class: 'btn' }, 'حفظ'),
+      h('button', { class: 'btn secondary', type: 'button', onclick: async () => { if (await confirmBox('إيقاف حذف الطلبات؟ لن يستطيع أحد حذف الطلبات حتى تحدد باسورد جديد.')) { try { await API.del('/settings/delete-password'); toast('تم إيقاف حذف الطلبات'); dpLoad(); } catch (err) { fail(err); } } } }, 'إيقاف الحذف')));
+  async function dpLoad() { try { const r = await API.get('/settings/delete-password'); dpState.textContent = r.enabled ? 'الحالة: مفعّل ✓' : 'الحالة: غير مفعّل - لا أحد يستطيع حذف الطلبات'; } catch { dpState.textContent = ''; } }
+  if (isOwner) dpLoad();
   const zbox = h('div');
   async function loadZones() {
     clear(zbox);
@@ -78,7 +92,7 @@
     h('div', { class: 'ph' }, h('div', null, h('h1', null, h('span', { class: 'ph-ico' }, icon('gear', 40)), 'الإعدادات العامة'), h('p', { class: 'muted' }, 'قم بتخصيص إعدادات منصتك بكل سهولة'))),
     h('div', { class: 'acc-grid' },
       acc('store', 'إعدادات المطاعم', 'إدارة بيانات المطاعم والفروع', [zonesCard, couponsCard, go('branches.html', 'إدارة الفروع')]),
-      acc('shield', 'إعدادات الأمان', 'إدارة أمان حسابك وكلمات المرور', [pw]),
+      acc('shield', 'إعدادات الأمان', 'إدارة أمان حسابك وكلمات المرور', isOwner ? [pw, dpForm] : [pw]),
       acc('eye', 'إعدادات المظهر', 'تغيير شكل ومظهر المنصة', [brandForm]),
       acc('bell', 'إعدادات الإشعارات', 'تخصيص طريقة استلام الإشعارات', [h('button', { class: 'btn', type: 'button', onclick: showNotifs }, 'عرض الإشعارات')]),
       acc('card', 'إعدادات الفواتير والمدفوعات', 'إدارة فواتير العملاء وطرق الدفع', [genForm], true),

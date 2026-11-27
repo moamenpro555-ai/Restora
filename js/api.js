@@ -27,6 +27,6 @@ const API = {
   post: (p, body, o) => API.req(p, { method: 'POST', body: body || {}, ...o }),
   patch: (p, body) => API.req(p, { method: 'PATCH', body }),
   put: (p, body) => API.req(p, { method: 'PUT', body }),
-  del: p => API.req(p, { method: 'DELETE' })
+  del: (p, body) => API.req(p, { method: 'DELETE', body })
 };
 const qs = o => { const p = new URLSearchParams(); for (const [k, v] of Object.entries(o || {})) if (v !== undefined && v !== null && v !== '') p.set(k, v); const s = p.toString(); return s ? '?' + s : ''; };

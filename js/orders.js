@@ -16,7 +16,7 @@
     const tone = { PAID: 'ok', PARTIAL: 'warn', UNPAID: 'warn', REFUNDED: 'err' }[o.payStatus] || 'warn';
     return chip(o.payStatus === 'PAID' && last ? AR.method[last.method] : AR.pay[o.payStatus], tone, 'card');
   };
-  async function act(fn) { try { await fn(); await load(); } catch (e) { fail(e); } }
+  async function act(fn) { try { await fn(); await load(true); } catch (e) { fail(e); } }
   function draw() {
     clear(list);
     const filtered = rows.filter(r => !type || r.type === type);
@@ -30,13 +30,30 @@
       { label: 'الإجمالي', render: r => h('span', { class: 'ltr' }, money(r.total)) },
       { label: 'الوقت', render: r => { const d = new Date(r.scheduledFor || r.createdAt); return h('div', null, h('span', { class: 'ic-line ltr' }, icon('clock', 16), timeStr(d)), h('span', { class: 'sub ltr' }, dateStr(d)), r.scheduledFor ? chip('مجدول', 'warn') : null); } },
       { label: 'تفاصيل', render: r => h('div', { class: 'act-row' }, h('button', { class: 'btn detail', onclick: () => details(r.id) }, icon('eye', 18), 'تفاصيل'),
-        NEXT(r) && can('orders.update') ? h('button', { class: 'btn next-btn', onclick: () => act(() => API.patch(`/orders/${r.id}/status`, { status: NEXT(r) })) }, AR.status[NEXT(r)]) : null) }], slice, 'لا توجد طلبات', 'rt');
+        NEXT(r) && can('orders.update') ? h('button', { class: 'btn next-btn', onclick: () => act(() => API.patch(`/orders/${r.id}/status`, { status: NEXT(r) })) }, AR.status[NEXT(r)]) : null,
+        can('orders.update') ? h('button', { class: 'btn danger sm', title: 'حذف الطلب', onclick: () => deleteOrder(r) }, icon('xc', 16)) : null) }], slice, 'لا توجد طلبات', 'rt');
     list.append(h('div', { class: 'tbl-card' }, table, filtered.length ? pager(filtered.length, PAGE, page, n => { page = n; draw(); }, `إجمالي الطلبات: ${filtered.length} ${filtered.length === 1 ? 'طلب' : 'طلبات'}`) : null));
   }
-  async function load() {
-    clear(list); list.append(loading());
+  async function load(silent) {
+    if (silent !== true) { clear(list); list.append(loading()); }
     try { rows = await API.get('/orders' + qs({ status, ...(days ? rangeBounds(days) : {}) })); draw(); }
-    catch (e) { clear(list); list.append(h('div', { class: 'card empty' }, e.message)); }
+    catch (e) { if (silent === true) return; clear(list); list.append(h('div', { class: 'card empty' }, e.message)); }
+  }
+  // Live updates: any status change made in the cashier or the kitchen refreshes this list by itself (no spinner), with polling as a fallback.
+  let pend = null;
+  const soon = () => { clearTimeout(pend); pend = setTimeout(() => load(true), 300); };
+  // Delete an order for good: needs the password the owner set in Settings.
+  function deleteOrder(o) {
+    const pw = h('input', { type: 'password', placeholder: 'باسورد الحذف', autocomplete: 'off', required: true });
+    const go = async e => {
+      e.preventDefault(); if (!pw.value) return;
+      try { await API.del('/orders/' + o.id, { password: pw.value }); m.close(); toast(`تم حذف الطلب #${o.number}`); load(true); }
+      catch (err) { fail(err); pw.value = ''; pw.focus(); }
+    };
+    const m = modal(`حذف الطلب #${o.number}`, h('form', { onsubmit: go },
+      h('p', null, 'سيُحذف الطلب نهائيًا من السجل وتُعاد كمية المخزون المخصومة. أدخل الباسورد الذي حدده المالك للمتابعة.'), pw,
+      h('div', { class: 'row', style: 'margin-top:12px' }, h('button', { class: 'btn danger', type: 'submit' }, 'حذف نهائي'), h('button', { class: 'btn secondary', type: 'button', onclick: () => m.close() }, 'إلغاء'))));
+    setTimeout(() => pw.focus(), 50);
   }
   // Add items to an open order (server re-prices everything).
   async function addItems(o) {
@@ -74,7 +91,8 @@
           !closed && remaining > 0.005 && can('orders.update') ? h('button', { class: 'btn ok', onclick: async () => { const l = await collectPayment(remaining); if (l) { m.close(); act(async () => { await API.post(`/orders/${o.id}/pay`, { payments: l }); await sendToKitchen(o); }); } } }, 'تحصيل') : null,
           paid(o) > 0 && can('orders.refund') ? h('button', { class: 'btn secondary', onclick: () => { m.close(); formModal({ title: 'استرداد', fields: [{ name: 'amount', label: 'المبلغ', type: 'number', step: '0.01', required: true }, { name: 'method', label: 'الطريقة', type: 'select', options: Object.entries(AR.method).map(([value, label]) => ({ value, label })) }, { name: 'note', label: 'السبب' }], onSubmit: async d => { await API.post(`/orders/${o.id}/refund`, d); load(); } }); } }, 'استرداد') : null,
           !closed && can('orders.cancel') ? h('button', { class: 'btn danger', onclick: async () => { if (await confirmBox('إلغاء الطلب؟')) { m.close(); act(() => API.patch(`/orders/${o.id}/status`, { status: 'CANCELLED' })); } } }, 'إلغاء') : null,
-          h('button', { class: 'btn secondary', onclick: async () => { if (!brand) brand = await API.get('/settings/branding').catch(() => null); printReceipt(o, brand); } }, 'طباعة'))), { wide: false });
+          h('button', { class: 'btn secondary', onclick: async () => { if (!brand) brand = await API.get('/settings/branding').catch(() => null); printReceipt(o, brand); } }, 'طباعة'),
+          can('orders.update') ? h('button', { class: 'btn danger', onclick: () => { m.close(); deleteOrder(o); } }, 'حذف') : null)), { wide: false });
     } catch (e) { fail(e); }
   }
   const PILLS = [['', 'الكل', 'grid'], ['NEW', 'جديد', 'dot', 'info'], ['CONFIRMED', 'مؤكد', 'checkc', 'info'], ['PREPARING', 'قيد التحضير', 'chef', 'warn'], ['READY', 'جاهز', 'checkc', 'ok'],
@@ -86,7 +104,9 @@
         selectPill('filter', [['', 'الكل'], ...Object.entries(AR.type)], type, k => { type = k; page = 1; draw(); }),
         selectPill('calendar', [[1, 'اليوم'], [7, 'آخر 7 أيام'], [30, 'آخر 30 يوم'], [0, 'كل الوقت']], days, k => { days = Number(k); page = 1; load(); }))),
     list);
-  connectSocket({ 'order:new': () => { toast('طلب جديد'); load(); }, 'order:status': load });
+  const sock = connectSocket({ 'order:new': () => { toast('طلب جديد'); soon(); }, 'order:status': soon });
+  setInterval(() => { if (!document.hidden) load(true); }, 20000); // safety net if the socket drops (e.g. the server was asleep)
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) soon(); });
   load();
   if (location.hash.length > 1) details(decodeURIComponent(location.hash.slice(1)));
 })();
