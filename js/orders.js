@@ -82,7 +82,7 @@
       const closed = ['COMPLETED', 'CANCELLED'].includes(o.status);
       const m = modal(`طلب #${o.number}`, h('div', null,
         h('div', { class: 'row' }, statusBadge(o.status), statusBadge(o.payStatus), h('span', { class: 'muted' }, `${AR.type[o.type]} - ${AR.source[o.source]}`)),
-        o.customerName ? h('p', null, `${o.customerName} ${o.customerPhone || ''}`) : null, o.deliveryAddress ? h('p', null, 'العنوان: ' + o.deliveryAddress) : null, o.notes ? h('p', null, 'ملاحظات: ' + o.notes) : null,
+        o.customerName ? h('p', null, `${o.customerName} ${o.customerPhone || ''}`) : null, o.driver ? h('p', null, 'عامل التوصيل: ' + o.driver.name) : null, o.deliveryAddress ? h('p', null, 'العنوان: ' + o.deliveryAddress) : null, o.notes ? h('p', null, 'ملاحظات: ' + o.notes) : null,
         o.items.map(i => h('div', { class: 'cart-line' }, h('span', null, `${i.quantity} × ${i.name}`, Array.isArray(i.options) && i.options.length ? h('small', { class: 'muted' }, ' (' + i.options.map(x => x.choice).join('، ') + ')') : null), h('span', null, money(Number(i.unitPrice) * i.quantity)))),
         h('div', { class: 'totals' }, h('div', { class: 't' }, h('span', null, 'الإجمالي'), h('span', null, money(o.total))), h('div', null, h('span', null, 'المدفوع'), h('span', null, money(paid(o))))),
         o.payments.length ? h('div', { class: 'muted' }, o.payments.map(p => `${p.isRefund ? 'استرداد' : 'دفع'} ${AR.method[p.method]} ${money(p.amount)}`).join(' | ')) : null,

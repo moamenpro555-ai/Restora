@@ -29,6 +29,7 @@
     } catch (e) { fail(e); }
   }
   async function move(o, status) {
+    if (status === 'OUT_FOR_DELIVERY') { if (await dispatchOrder(o)) load(); return; } // choose the delivery worker first
     try { await API.patch(`/orders/${o.id}/status`, { status }); load(); } catch (e) { fail(e.code === 'UNPAID' ? new Error('يجب تحصيل الطلب من شاشة الطلبات قبل التسليم') : e); }
   }
   const timers = [];

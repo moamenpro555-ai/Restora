@@ -32,6 +32,7 @@ async function boot(title, perm, opts = {}) {
     h('nav', null, nav.map(([href, label]) => h('a', { href, class: href === here ? 'active' : '' }, icon(NAV_ICON[href] || 'grid', 20), h('span', null, label)))));
   if (opts.support) side.append(h('div', { class: 'side-support' }, h('div', { class: 'ss-top' }, icon('support', 34), h('div', null, h('strong', null, 'دعم فني'), h('small', null, 'متاح دائمًا لمساعدتك'))), h('a', { class: 'ss-btn', href: 'support.html' }, 'تواصل معنا', icon('arrowl', 18))));
   const kdsBtn = !isAdmin && KDS.allowed() ? KDS.button() : null;
+  const dlvBtn = !isAdmin && DLV.allowed() ? DLV.button() : null;
   const kdsPage = !isAdmin && ME.permissions.includes('kitchen.view') ? KDS.pageLink(false) : null;
   const bell = h('button', { class: 'icon-btn bell', title: 'الإشعارات', onclick: showNotifs }, icon('bell'));
   const themeBtn = h('button', { class: 'icon-btn', title: 'الوضع الليلي' });
@@ -61,7 +62,7 @@ async function boot(title, perm, opts = {}) {
     h('div', { class: 'brand-top' }, h('span', { class: 'brand-ico' }, icon('chef', 38)), h('div', null, h('strong', null, 'Restora'), h('small', null, 'Multi-Restaurant Platform'))),
     h('div', { class: 'tagline' }, h('span', { class: 'tg-deco' + (opts.deco ? ' ' + opts.deco : '') }), h('span', { class: 'tg-text' }, tagline)),
     h('div', { id: 'bar-slot', class: 'bar-slot' }),
-    themeBtn, kdsPage, kdsBtn, isAdmin ? null : bell, h('div', { class: 'user-wrap' }, userBtn, userMenu));
+    themeBtn, kdsPage, dlvBtn, kdsBtn, isAdmin ? null : bell, h('div', { class: 'user-wrap' }, userBtn, userMenu));
   const view = h('main', { id: 'view' });
   const st = ME.tenant && ME.tenant.status;
   const banner = st === 'EXPIRED' ? h('div', { class: 'banner' }, 'اشتراكك منتهي. ', h('a', { href: 'subscriptions.html' }, 'جدّد الآن')) : st === 'SUSPENDED' ? h('div', { class: 'banner' }, 'الحساب موقوف. تواصل مع الدعم.') : null;
@@ -80,6 +81,7 @@ async function boot(title, perm, opts = {}) {
     view.append(h('div', { class: 'card empty' }, 'لا تملك صلاحية الوصول لهذه الصفحة')); return null; }
   if (sbHidden()) document.querySelector('.app').classList.add('sb-hidden');
   if (!isAdmin && !standalone && KDS.allowed()) KDS.start();
+  if (!isAdmin && !standalone && DLV.allowed()) DLV.start();
   if (!isAdmin && !standalone) { refreshBell(bell); setInterval(() => refreshBell(bell), 60000); }
   return view;
 }
@@ -140,6 +142,7 @@ const KDS = (() => {
     setInterval(() => subs.forEach(f => f(orders)), 30000); // keep the "since" labels fresh
   }
   async function move(o, status) {
+    if (status === 'OUT_FOR_DELIVERY') { await dispatchOrder(o); refresh(); return; } // choose the delivery worker first
     try { await API.patch(`/orders/${o.id}/status`, { status }); } catch (e) { fail(e.code === 'UNPAID' ? new Error('حصّل المبلغ أولًا قبل التسليم') : e); }
     refresh();
   }
@@ -204,4 +207,97 @@ const KDS = (() => {
 async function sendToKitchen(order) {
   if (!order || order.status !== 'NEW' || order.source !== 'POS') return;
   try { await API.patch(`/orders/${order.id}/status`, { status: 'CONFIRMED' }); } catch {}
+}
+
+// ---------------- Delivery: workers + orders that are out ----------------
+// A delivery order leaves with a worker (chosen here); a worker may carry several orders at once. "Busy" = has at least one order out;
+// busy workers sink below the free ones in the list. When the order arrives it is marked delivered (payment is collected first if still due).
+const DLV = (() => {
+  const subs = new Set(); let data = { drivers: [], ready: [] }, loaded = false, started = false, offset = 0, pend = null;
+  const can = p => ME.permissions.includes(p);
+  const allowed = () => can('orders.view') && ((ME.tenant && ME.tenant.modules) || {}).delivery !== false;
+  const pad = n => String(n).padStart(2, '0');
+  const hms = ms => { const t = Math.max(0, Math.floor(ms / 1000)); return `${pad(Math.floor(t / 3600))}:${pad(Math.floor(t % 3600 / 60))}:${pad(t % 60)}`; };
+  async function refresh() {
+    try { const r = await API.get('/drivers/board'); offset = new Date(r.now) - Date.now(); data = r; loaded = true; } catch {}
+    subs.forEach(f => f(data));
+  }
+  const soon = () => { clearTimeout(pend); pend = setTimeout(refresh, 250); };
+  function start() { if (started) return; started = true; refresh(); connectSocket({ 'order:new': soon, 'order:status': soon }); setInterval(refresh, 30000); }
+  const subscribe = fn => { subs.add(fn); if (loaded) fn(data); return () => subs.delete(fn); };
+  // free workers first (by name); busy ones below, fewer orders first, then the one that left earliest
+  const sorted = list => [...list].sort((a, b) => (a.orders.length > 0) - (b.orders.length > 0) || (a.orders.length && b.orders.length ? a.orders.length - b.orders.length || new Date(a.orders[0].dispatchedAt) - new Date(b.orders[0].dispatchedAt) : 0) || (a.unassigned ? 1 : 0) - (b.unassigned ? 1 : 0) || a.name.localeCompare(b.name, 'ar'));
+  async function arrive(o) {
+    if (o.remaining > 0.005 && can('orders.update') && typeof collectPayment === 'function') {
+      const lines = await collectPayment(o.remaining); if (!lines) return;
+      try { await API.post(`/orders/${o.id}/pay`, { payments: lines }); } catch (e) { return fail(e); }
+    }
+    try { await API.patch(`/orders/${o.id}/status`, { status: 'COMPLETED' }); toast(`وصل الطلب #${o.number} — استغرق ${Math.max(1, Math.round((Date.now() + offset - new Date(o.dispatchedAt)) / 60000))} دقيقة`); } catch (e) { fail(e.code === 'UNPAID' ? new Error('حصّل المبلغ أولًا') : e); }
+    refresh(); if (typeof KDS !== 'undefined') KDS.refresh();
+  }
+  const driverForm = d => formModal({ title: d ? 'تعديل عامل' : 'عامل توصيل جديد', values: d || {}, fields: [{ name: 'name', label: 'الاسم', required: true }, { name: 'phone', label: 'الهاتف' }],
+    onSubmit: async f => { const b = { name: f.name, phone: f.phone || null }; if (d) await API.patch('/drivers/' + d.id, b); else await API.post('/drivers', b); refresh(); } });
+  function view() {
+    const count = h('span', { class: 'kv-c' }), body = h('div', { class: 'kv-b dl-b' });
+    const head = h('div', { class: 'kv-h' }, icon('scooter', 22), h('b', null, 'التوصيل'), count, h('span', { style: 'flex:1' }),
+      can('orders.update') ? h('button', { class: 'btn sm', onclick: () => driverForm() }, icon('plus', 16), 'عامل') : null);
+    const el = h('div', { class: 'kv dl' }, head, body);
+    const orderRow = o => h('div', { class: 'dl-o' },
+      h('div', { class: 'dl-o-t' }, h('b', null, '#' + o.number), h('span', { class: 'dl-o-n' }, o.customerName || '-'), h('span', { class: 'dl-timer ltr', 'data-t': o.dispatchedAt }, hms(Date.now() + offset - new Date(o.dispatchedAt)))),
+      h('div', { class: 'dl-o-a' }, icon('pin', 14), [o.deliveryAddress, o.zoneName].filter(Boolean).join(' — ') || '-'),
+      h('div', { class: 'dl-o-f' }, o.remaining > 0.005 ? h('span', { class: 'dl-due' }, 'يحصّل ', h('b', { class: 'ltr' }, money(o.remaining))) : chip('مدفوع', 'ok'),
+        can('orders.update') ? h('button', { class: 'btn sm ok', onclick: () => arrive(o) }, icon('checkc', 16), 'وصل') : null));
+    const readyRow = o => h('div', { class: 'dl-o' },
+      h('div', { class: 'dl-o-t' }, h('b', null, '#' + o.number), h('span', { class: 'dl-o-n' }, o.customerName || '-'), h('b', { class: 'ltr' }, money(o.total))),
+      h('div', { class: 'dl-o-a' }, icon('pin', 14), [o.deliveryAddress, o.zoneName].filter(Boolean).join(' — ') || '-'),
+      can('orders.update') ? h('div', { class: 'dl-o-f' }, h('button', { class: 'btn sm', onclick: () => dispatchOrder(o).then(refresh) }, icon('scooter', 16), 'خرج للتوصيل')) : null);
+    const driverCard = d => {
+      const busy = d.orders.length > 0;
+      return h('div', { class: 'dl-d' + (busy ? ' busy' : '') },
+        h('div', { class: 'dl-d-h' }, h('span', { class: 'dl-av' }, d.name.trim().charAt(0)), h('div', { class: 'dl-d-n' }, h('strong', null, d.name), d.phone ? h('small', { class: 'ltr' }, d.phone) : null),
+          d.unassigned ? chip('بدون عامل', 'warn') : busy ? chip(`مشغول (${d.orders.length})`, 'warn', 'dot') : chip('متاح', 'ok', 'dot'),
+          !d.unassigned && !busy && can('orders.update') ? h('div', { class: 'act-row' }, h('button', { class: 'ibtn orange sm', title: 'تعديل', onclick: () => driverForm(d) }, icon('edit', 14)),
+            h('button', { class: 'ibtn red sm', title: 'حذف', onclick: async () => { if (await confirmBox('حذف العامل ' + d.name + '؟')) { try { await API.del('/drivers/' + d.id); refresh(); } catch (e) { fail(e); } } } }, icon('trash', 14))) : null),
+        busy ? h('div', { class: 'dl-d-o' }, d.orders.map(orderRow)) : null);
+    };
+    const paint = r => {
+      count.textContent = r.ready.length + r.drivers.reduce((t, d) => t + d.orders.length, 0); clear(body);
+      body.append(h('div', { class: 'dl-sec' }, 'جاهز للخروج (' + r.ready.length + ')'), r.ready.length ? r.ready.map(readyRow) : h('div', { class: 'empty sm' }, 'لا توجد طلبات توصيل جاهزة'),
+        h('div', { class: 'dl-sec' }, 'عمال التوصيل'), r.drivers.length ? sorted(r.drivers).map(driverCard) : h('div', { class: 'empty sm' }, 'لم تُضف عمال توصيل بعد — اضغط «+ عامل»'));
+    };
+    const off = subscribe(paint), tk = setInterval(() => el.querySelectorAll('.dl-timer[data-t]').forEach(t => { t.textContent = hms(Date.now() + offset - new Date(t.dataset.t)); }), 1000);
+    return { el, destroy: () => { off(); clearInterval(tk); } };
+  }
+  function button() {
+    const badge = h('span', { class: 'n kds-n' }), btn = h('button', { class: 'icon-btn kds-btn dlv-btn', title: 'التوصيل وعمال الدليفيري' }, icon('scooter', 22), badge);
+    const wrap = h('div', { class: 'kds-wrap' }, btn); let open = null;
+    const close = () => { if (open) { open.destroy(); open.el.remove(); open = null; } };
+    btn.addEventListener('click', e => {
+      e.stopPropagation(); if (open) return close();
+      document.body.click(); // close any other dropdown
+      const v = view(), pop = h('div', { class: 'kds-pop dlv-pop', onclick: ev => ev.stopPropagation() }, v.el); wrap.append(pop); open = { destroy: v.destroy, el: pop };
+    });
+    document.addEventListener('click', close);
+    subscribe(r => { const n = r.ready.length + r.drivers.reduce((t, d) => t + d.orders.length, 0); badge.textContent = n; badge.style.display = n ? '' : 'none'; btn.classList.toggle('has', n > 0); });
+    badge.style.display = 'none';
+    return wrap;
+  }
+  return { allowed, start, button, refresh, subscribe, sorted };
+})();
+
+// Choose the delivery worker for an order that is leaving, then mark it OUT_FOR_DELIVERY. Resolves true when it went out.
+async function dispatchOrder(o) {
+  let board; try { board = await API.get('/drivers/board'); } catch (e) { fail(e); return false; }
+  const list = DLV.sorted(board.drivers.filter(d => !d.unassigned));
+  return new Promise(res => {
+    let done = false; const finish = v => { if (!done) { done = true; res(v); } };
+    const go = async d => {
+      try { await API.patch(`/orders/${o.id}/status`, { status: 'OUT_FOR_DELIVERY', ...(d ? { driverId: d.id } : {}) }); m.close(); toast(`الطلب #${o.number} خرج للتوصيل${d ? ' مع ' + d.name : ''}`); finish(true); if (typeof KDS !== 'undefined') KDS.refresh(); DLV.refresh(); } catch (e) { fail(e); }
+    };
+    const body = h('div', { class: 'dl-pick' }, list.length ? list.map(d => h('button', { class: 'dl-pick-r' + (d.orders.length ? ' busy' : ''), onclick: () => go(d) },
+      h('span', { class: 'dl-av' }, d.name.trim().charAt(0)), h('strong', null, d.name), h('span', { style: 'flex:1' }), d.orders.length ? chip(`مشغول (${d.orders.length})`, 'warn', 'dot') : chip('متاح', 'ok', 'dot')))
+      : [h('p', { class: 'muted' }, 'لا يوجد عمال توصيل. أضف عاملًا من قائمة التوصيل في الأعلى، أو أخرج الطلب بدون تحديد عامل.'), h('button', { class: 'btn secondary', onclick: () => go(null) }, 'خروج بدون عامل')]);
+    const m = modal(`مع أي عامل يخرج الطلب #${o.number}؟`, body);
+    m.el.addEventListener('click', e => { if (e.target === m.el) finish(false); });
+  });
 }
