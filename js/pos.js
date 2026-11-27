@@ -10,6 +10,7 @@
   async function loadTables() { if (mods.tables === false) return; try { tables = (await API.get('/tables')).filter(t => t.branchId === st.branchId); } catch { tables = []; } }
   async function loadRegister() { try { register = await API.get('/finance/registers/current' + qs({ branchId: st.branchId })); } catch { register = null; } }
   await Promise.all([loadTables(), loadRegister()]);
+  let bestName = ''; try { const bs = ((await API.get('/reports/dashboard')).bestSellers || [])[0]; if (bs && bs.qty > 0) bestName = bs.name; } catch {}
   let zones = []; try { zones = (await API.get('/delivery-zones')).filter(z => z.isActive); } catch {}
 
   const grid = h('div', { class: 'grid' }), catBar = h('div', { class: 'cats' }), cartBox = h('div', { class: 'card cart' });
@@ -29,8 +30,8 @@
     [['all', 'الكل'], ...cats.map(c => [c.id, c.name])].forEach(([id, n]) => catBar.append(h('button', { class: 'pill' + (st.cat === id ? ' on' : ''), onclick: () => { st.cat = id; drawProducts(); } }, id === 'all' ? null : icon(catIcon(n), 18), n)));
     const list = products.filter(p => (st.cat === 'all' || p.categoryId === st.cat) && p.name.includes(st.q));
     if (!list.length) grid.append(h('div', { class: 'empty' }, 'لا منتجات'));
-    list.forEach(p => grid.append(h('div', { class: 'card pcard' + (p.isAvailable ? '' : ' off'), onclick: () => pick(p) },
-      h('div', { class: 'pimg' }, p.imageUrl ? h('img', { src: p.imageUrl, alt: '' }) : icon('chef', 40)),
+    list.forEach(p => grid.append(h('div', { class: 'card pcard' + (p.isAvailable ? '' : ' off') + (st.cart.some(l => l.productId === p.id) ? ' sel' : ''), 'data-id': p.id, onclick: () => pick(p) },
+      h('div', { class: 'pimg' }, p.imageUrl ? h('img', { src: p.imageUrl, alt: '', loading: 'lazy' }) : icon('chef', 40), p.name === bestName ? h('span', { class: 'pbadge' }, icon('star', 13), 'الأكثر مبيعاً') : null),
       h('div', { class: 'pname' }, p.name),
       h('div', { class: 'pfoot' }, h('span', { class: 'price' }, p.isAvailable ? money(p.price) : 'غير متاح'), h('span', { class: 'padd' }, icon('plus', 18))))));
   }
@@ -78,6 +79,7 @@
   }
   function drawCart() {
     drawShift(); clear(cartBox);
+    grid.querySelectorAll('.pcard').forEach(c => c.classList.toggle('sel', st.cart.some(l => l.productId === c.dataset.id))); // highlight products already in the cart
     cartBox.append(h('div', { class: 'cart-scroll' }, h('div', { class: 'cart-head' }, h('h3', null, 'الطلب الحالي'), icon('cart', 24)),
       branches.length > 1 ? h('select', { onchange: async e => { st.branchId = e.target.value; st.table = ''; await Promise.all([loadTables(), loadRegister()]); drawCart(); } }, branches.map(b => h('option', { value: b.id, selected: b.id === st.branchId }, b.name))) : null,
       h('select', { onchange: e => { st.type = e.target.value; drawCart(); } }, Object.entries(AR.type).filter(([k]) => k !== 'DINE_IN' || mods.tables !== false).filter(([k]) => k !== 'DELIVERY' || mods.delivery !== false).map(([k, n]) => h('option', { value: k, selected: k === st.type }, n))),
