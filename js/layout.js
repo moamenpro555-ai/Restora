@@ -235,25 +235,9 @@ const DLV = (() => {
     try { await API.patch(`/orders/${o.id}/status`, { status: 'COMPLETED' }); toast(`وصل الطلب #${o.number} — استغرق ${Math.max(1, Math.round((Date.now() + offset - new Date(o.dispatchedAt)) / 60000))} دقيقة`); } catch (e) { fail(e.code === 'UNPAID' ? new Error('حصّل المبلغ أولًا') : e); }
     refresh(); if (typeof KDS !== 'undefined') KDS.refresh();
   }
-  // Delivery workers are picked from the employees (with or without an account) — nothing is typed in by hand.
-  const driverForm = d => { if (d) return formModal({ title: 'تعديل عامل', values: d, fields: [{ name: 'name', label: 'الاسم', required: true }, { name: 'phone', label: 'الهاتف' }],
-    onSubmit: async f => { await API.patch('/drivers/' + d.id, { name: f.name, phone: f.phone || null }); refresh(); } }); return pickEmployee(); };
-  async function pickEmployee() {
-    let cands; try { cands = await API.get('/drivers/candidates'); } catch (e) { return fail(e); }
-    // people whose job title says delivery come first
-    const isDel = c => /توصيل|دليفري|ديليفري|delivery/i.test(c.sub || ''); cands.sort((x, y) => isDel(y) - isDel(x));
-    const list = h('div', { class: 'dl-pick' }), inp = h('input', { class: 'input', placeholder: 'ابحث باسم الموظف...', style: 'margin-bottom:10px' });
-    const m = modal('اختر الموظف ليكون عامل توصيل', h('div', null, cands.length > 6 ? inp : null, list));
-    const add = async c => { try { await API.post('/drivers', c.kind === 'staff' ? { staffId: c.id } : { userId: c.id }); m.close(); toast('تمت إضافة ' + c.name + ' لعمال التوصيل'); refresh(); } catch (e) { fail(e); } };
-    const paint = () => { const t = inp.value.trim().toLowerCase(); clear(list); const rows = cands.filter(c => !t || c.name.toLowerCase().includes(t) || (c.sub || '').toLowerCase().includes(t));
-      list.append(...(rows.length ? rows.map(c => h('button', { class: 'dl-pick-r', onclick: () => add(c) }, h('span', { class: 'dl-av' }, c.name.trim().charAt(0)), h('strong', null, c.name), h('small', { class: 'muted' }, c.sub || ''), h('span', { style: 'flex:1' }), icon('plus', 16)))
-        : [h('p', { class: 'muted' }, cands.length ? 'لا نتائج مطابقة' : 'كل الموظفين مضافون بالفعل، أو لا يوجد موظفون — أضف موظفًا من صفحة «الموظفون والصلاحيات» أولًا.')])); };
-    inp.addEventListener('input', paint); paint();
-  }
   function view() {
     const count = h('span', { class: 'kv-c' }), body = h('div', { class: 'kv-b dl-b' });
-    const head = h('div', { class: 'kv-h' }, icon('scooter', 22), h('b', null, 'التوصيل'), count, h('span', { style: 'flex:1' }),
-      can('orders.update') ? h('button', { class: 'btn sm', onclick: () => driverForm() }, icon('plus', 16), 'عامل') : null);
+    const head = h('div', { class: 'kv-h' }, icon('scooter', 22), h('b', null, 'التوصيل'), count, h('span', { style: 'flex:1' }));
     const el = h('div', { class: 'kv dl' }, head, body);
     const orderRow = o => h('div', { class: 'dl-o' },
       h('div', { class: 'dl-o-t' }, h('b', null, '#' + o.number), h('span', { class: 'dl-o-n' }, o.customerName || '-'), h('span', { class: 'dl-timer ltr', 'data-t': o.dispatchedAt }, hms(Date.now() + offset - new Date(o.dispatchedAt)))),
@@ -269,14 +253,13 @@ const DLV = (() => {
       return h('div', { class: 'dl-d' + (busy ? ' busy' : '') },
         h('div', { class: 'dl-d-h' }, h('span', { class: 'dl-av' }, d.name.trim().charAt(0)), h('div', { class: 'dl-d-n' }, h('strong', null, d.name), d.phone ? h('small', { class: 'ltr' }, d.phone) : null),
           d.unassigned ? chip('بدون عامل', 'warn') : busy ? chip(`مشغول (${d.orders.length})`, 'warn', 'dot') : chip('متاح', 'ok', 'dot'),
-          !d.unassigned && !busy && can('orders.update') ? h('div', { class: 'act-row' }, d.linked ? null : h('button', { class: 'ibtn orange sm', title: 'تعديل', onclick: () => driverForm(d) }, icon('edit', 14)),
-            h('button', { class: 'ibtn red sm', title: 'إزالة من التوصيل', onclick: async () => { if (await confirmBox('إزالة ' + d.name + ' من عمال التوصيل؟ (لن يُحذف من الموظفين)')) { try { await API.del('/drivers/' + d.id); refresh(); } catch (e) { fail(e); } } } }, icon('trash', 14))) : null),
+          null),
         busy ? h('div', { class: 'dl-d-o' }, d.orders.map(orderRow)) : null);
     };
     const paint = r => {
       count.textContent = r.ready.length + r.drivers.reduce((t, d) => t + d.orders.length, 0); clear(body);
       body.append(h('div', { class: 'dl-sec' }, 'جاهز للخروج (' + r.ready.length + ')'), r.ready.length ? r.ready.map(readyRow) : h('div', { class: 'empty sm' }, 'لا توجد طلبات توصيل جاهزة'),
-        h('div', { class: 'dl-sec' }, 'عمال التوصيل'), r.drivers.length ? sorted(r.drivers).map(driverCard) : h('div', { class: 'empty sm' }, 'لم تُضف عمال توصيل بعد — اضغط «+ عامل» واختر من الموظفين'));
+        h('div', { class: 'dl-sec' }, 'عمال التوصيل'), r.drivers.length ? sorted(r.drivers).map(driverCard) : h('div', { class: 'empty sm' }, 'لا يوجد عمال توصيل — فعّل «عامل توصيل» للموظف من صفحة الموظفين والصلاحيات'));
     };
     const off = subscribe(paint), tk = setInterval(() => el.querySelectorAll('.dl-timer[data-t]').forEach(t => { t.textContent = hms(Date.now() + offset - new Date(t.dataset.t)); }), 1000);
     return { el, destroy: () => { off(); clearInterval(tk); } };
@@ -309,7 +292,7 @@ async function dispatchOrder(o) {
     };
     const body = h('div', { class: 'dl-pick' }, list.length ? list.map(d => h('button', { class: 'dl-pick-r' + (d.orders.length ? ' busy' : ''), onclick: () => go(d) },
       h('span', { class: 'dl-av' }, d.name.trim().charAt(0)), h('strong', null, d.name), h('span', { style: 'flex:1' }), d.orders.length ? chip(`مشغول (${d.orders.length})`, 'warn', 'dot') : chip('متاح', 'ok', 'dot')))
-      : [h('p', { class: 'muted' }, 'لا يوجد عمال توصيل. أضف عاملًا من قائمة التوصيل في الأعلى (يُختار من الموظفين)، أو أخرج الطلب بدون تحديد عامل.'), h('button', { class: 'btn secondary', onclick: () => go(null) }, 'خروج بدون عامل')]);
+      : [h('p', { class: 'muted' }, 'لا يوجد عمال توصيل. فعّل «عامل توصيل» للموظف من صفحة الموظفين، أو أخرج الطلب بدون تحديد عامل.'), h('button', { class: 'btn secondary', onclick: () => go(null) }, 'خروج بدون عامل')]);
     const m = modal(`مع أي عامل يخرج الطلب #${o.number}؟`, body);
     m.el.addEventListener('click', e => { if (e.target === m.el) finish(false); });
   });
