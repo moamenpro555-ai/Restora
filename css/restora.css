@@ -470,3 +470,18 @@
 /* top-bar kitchen screen link */
 a.kds-page{display:inline-grid;place-items:center;text-decoration:none;color:var(--text)}
 .kds-page.active{background:var(--primary);color:#fff}
+
+/* ===== attendance board ===== */
+.att-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin-bottom:18px}
+.att-tile{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:20px;border:1px solid var(--rs-line);background:var(--surface);box-shadow:0 2px 8px rgba(15,23,42,.06);transition:box-shadow .2s,border-color .2s}
+.att-tile.on{border-color:#34d399;box-shadow:0 8px 24px rgba(16,185,129,.2);background:linear-gradient(180deg,rgba(16,185,129,.07),var(--surface))}
+.att-top{display:flex;align-items:center;gap:10px}
+.att-av{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:var(--pc-soft);color:var(--primary);font-weight:800;font-size:1.2rem;flex:none}
+.att-tile.on .att-av{background:#10b981;color:#fff}
+.att-nm{flex:1;min-width:0;display:flex;flex-direction:column}.att-nm strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.att-nm small{color:var(--muted)}
+.att-st{font-size:.78rem;font-weight:800;padding:3px 10px;border-radius:999px;background:var(--surface2);color:var(--muted)}
+.att-tile.on .att-st{background:#d1fae5;color:#047857}
+.att-timer{font-size:2rem;font-weight:800;letter-spacing:1px;text-align:center;direction:ltr;font-variant-numeric:tabular-nums;color:var(--muted)}
+.att-tile.on .att-timer{color:#059669}
+.att-sums{display:flex;justify-content:space-between;font-size:.85rem;color:var(--muted)}.att-sums b{color:var(--text)}
+.att-btn{width:100%;justify-content:center;gap:8px}
