@@ -59,12 +59,25 @@
     onSubmit: async d => { if (z) await API.patch('/delivery-zones/' + z.id, d); else await API.post('/delivery-zones', d); loadZones(); } });
   const zonesCard = h('div', { class: 'card' }, h('h3', null, 'مناطق التوصيل'), h('button', { class: 'btn sm', onclick: () => zform() }, '+ منطقة'), zbox);
   loadZones();
+  const cbox = h('div');
+  async function loadCoupons() {
+    clear(cbox);
+    try {
+      const rows = await API.get('/coupons');
+      cbox.append(dataTable([{ label: 'الكود', render: c => h('b', { class: 'ltr' }, c.code) }, { label: 'نسبة الخصم', render: c => Number(c.percent) + '%' }, { label: 'نشط', render: c => c.isActive ? 'نعم' : 'لا' },
+        { label: '', render: c => h('div', { class: 'row' }, h('button', { class: 'btn sm secondary', onclick: () => cform(c) }, 'تعديل'), h('button', { class: 'btn sm danger', onclick: async () => { if (await confirmBox('حذف الكود؟')) { await API.del('/coupons/' + c.id).catch(fail); loadCoupons(); } } }, 'حذف')) }], rows, 'لا توجد أكواد خصم'));
+    } catch (e) { cbox.append(h('div', { class: 'empty' }, e.message)); }
+  }
+  const cform = c => formModal({ title: c ? 'تعديل كود خصم' : 'كود خصم جديد', values: c ? { ...c, percent: Number(c.percent) } : { isActive: true }, fields: [{ name: 'code', label: 'الكود (مثال: 2000)', required: true }, { name: 'percent', label: 'نسبة الخصم %', type: 'number', step: '0.01', min: '0.01', required: true }, { name: 'isActive', label: 'نشط', type: 'checkbox' }],
+    onSubmit: async d => { if (c) await API.patch('/coupons/' + c.id, d); else await API.post('/coupons', d); loadCoupons(); } });
+  const couponsCard = h('div', { class: 'card' }, h('h3', null, 'أكواد الخصم'), h('p', { class: 'muted' }, 'الكاشير يدخل الكود في السلة فيُخصم النسبة المحددة من إجمالي الأصناف'), h('button', { class: 'btn sm', onclick: () => cform() }, '+ كود خصم'), cbox);
+  loadCoupons();
   const linkCard = h('div', { class: 'card' }, h('h3', null, 'رابط المنيو وQR'), h('a', { href: link, target: '_blank' }, link), qrBox, h('p', { class: 'muted' }, 'GitHub Pages لا يدعم دومينًا مستقلًا لكل مطعم؛ راجع docs في الدليل للدومينات المخصصة.'));
   const go = (href, t) => h('a', { class: 'btn', href }, t);
   v.append(h('div', { class: 'set-panel' },
     h('div', { class: 'ph' }, h('div', null, h('h1', null, h('span', { class: 'ph-ico' }, icon('gear', 40)), 'الإعدادات العامة'), h('p', { class: 'muted' }, 'قم بتخصيص إعدادات منصتك بكل سهولة'))),
     h('div', { class: 'acc-grid' },
-      acc('store', 'إعدادات المطاعم', 'إدارة بيانات المطاعم والفروع', [zonesCard, go('branches.html', 'إدارة الفروع')]),
+      acc('store', 'إعدادات المطاعم', 'إدارة بيانات المطاعم والفروع', [zonesCard, couponsCard, go('branches.html', 'إدارة الفروع')]),
       acc('shield', 'إعدادات الأمان', 'إدارة أمان حسابك وكلمات المرور', [pw]),
       acc('eye', 'إعدادات المظهر', 'تغيير شكل ومظهر المنصة', [brandForm]),
       acc('bell', 'إعدادات الإشعارات', 'تخصيص طريقة استلام الإشعارات', [h('button', { class: 'btn', type: 'button', onclick: showNotifs }, 'عرض الإشعارات')]),

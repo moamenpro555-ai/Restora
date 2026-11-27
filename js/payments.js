@@ -1,5 +1,5 @@
 // Split-payment dialog shared by POS and Orders. Without `opts` it resolves with [{method,amount}] or null.
-// With opts = { totalFor(discount) -> total, discount, notes } (POS) it also lets the cashier set the order discount and notes,
+// With opts = { totalFor(discount) -> total, discount, notes } (POS) it also lets the cashier add order notes (the discount now comes from a coupon code in the cart),
 // and resolves with { lines, discount, notes } or null.
 function collectPayment(remaining, opts) {
   return new Promise(res => {
@@ -18,10 +18,6 @@ function collectPayment(remaining, opts) {
     const info = h('div', { class: 'totals' });
     const upd = () => { const s = lines.reduce((a, l) => a + (l.amount || 0), 0); clear(info); info.append(h('div', null, h('span', null, 'المطلوب'), h('span', null, money(need))), h('div', { class: 't' }, h('span', null, 'المدخل'), h('span', null, money(s))), h('div', null, h('span', null, 'المتبقي'), h('span', null, money(Math.max(0, need - s))))); ok.disabled = !(s > 0 && s <= need + 0.005); };
     const extra = opts ? h('div', { class: 'pay-extra' },
-      h('label', null, 'الخصم (مبلغ)'),
-      h('input', { type: 'number', min: '0', step: '0.01', placeholder: '0', value: discount || '', oninput: e => {
-        discount = Math.max(0, Number(e.target.value) || 0); need = opts.totalFor(discount);
-        if (lines.length === 1) { lines[0].amount = r2(need); draw(); } upd(); } }),
       h('label', null, 'ملاحظات على الطلب'),
       h('textarea', { rows: 2, placeholder: 'اختياري', oninput: e => { notes = e.target.value; } }, notes)) : null;
     const ok = h('button', { class: 'btn ok', onclick: () => { m.close(); const l = lines.filter(x => x.amount > 0); res(opts ? { lines: l, discount, notes: notes.trim() } : l); } }, 'تأكيد الدفع');
@@ -60,7 +56,7 @@ async function printReceipt(order, brand) {
           h('td', { class: 'num' }, n(Number(i.unitPrice) * i.quantity)))))),
       h('div', { class: 'r-sums' },
         row('المجموع الفرعي', n(order.subtotal)),
-        Number(order.discount) ? row('خصم', '-' + n(order.discount)) : null,
+        Number(order.discount) ? row('خصم' + (order.couponCode ? ` (${order.couponCode})` : ''), '-' + n(order.discount)) : null,
         Number(order.tax) ? row('الضريبة' + (taxRate ? ` (${taxRate}%)` : ''), n(order.tax)) : null,
         Number(order.deliveryFee) ? row('توصيل', n(order.deliveryFee)) : null),
       h('div', { class: 'r-total' }, h('span', null, 'الإجمالي الكلي'), h('span', null, n(order.total))),

@@ -6,7 +6,7 @@
     [products, cats, branches, brand] = await Promise.all([API.get('/products'), API.get('/products/categories/all'), API.get('/branches'), API.get('/settings/branding').catch(() => null)]);
   } catch (e) { clear(v); v.append(h('div', { class: 'card empty' }, e.message)); return; }
   const mods = ME.tenant.modules || {};
-  const st = { cat: 'all', q: '', cart: [], type: 'TAKEAWAY', branchId: branches[0] && branches[0].id, table: '', name: '', phone: '', addr: '', zoneId: '', discount: 0, notes: '' };
+  const st = { cat: 'all', q: '', cart: [], type: 'TAKEAWAY', branchId: branches[0] && branches[0].id, table: '', name: '', phone: '', addr: '', zoneId: '', coupon: null, notes: '' };
   async function loadTables() { if (mods.tables === false) return; try { tables = (await API.get('/tables')).filter(t => t.branchId === st.branchId); } catch { tables = []; } }
   async function loadRegister() { try { register = await API.get('/finance/registers/current' + qs({ branchId: st.branchId })); } catch { register = null; } }
   await Promise.all([loadTables(), loadRegister()]);
@@ -28,10 +28,10 @@
   catBar.addEventListener('click', e => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
   const key = l => l.productId + JSON.stringify(l.options) + (l.notes || '');
   const lineTotal = l => (l.price + l.options.reduce((s, o) => s + o.price, 0)) * l.qty;
-  const totals = () => totalsFor(st.discount);
-  function totalsFor(discount) {
+  const totals = () => totalsFor();
+  function totalsFor() {
     const sub = st.cart.reduce((s, l) => s + lineTotal(l), 0);
-    const disc = Math.min(Math.max(discount || 0, 0), sub);
+    const disc = st.coupon ? Math.round(sub * st.coupon.percent) / 100 : 0; // discount comes only from a coupon code (percentage)
     const tax = (sub - disc) * Number(mods.taxRate || 0) / 100;
     const zn = zones.find(z => z.id === st.zoneId); const fee = st.type === 'DELIVERY' ? Number(zn ? zn.fee : mods.deliveryFee || 0) : 0;
     return { sub, disc, tax, fee, total: sub - disc + tax + fee };
@@ -126,7 +126,7 @@
         h('div', { class: 'seg', role: 'group', 'aria-label': 'نوع الطلب' }, types.map(([k, n]) => h('button', { type: 'button', class: 'seg-b' + (k === st.type ? ' on' : ''), onclick: () => { st.type = k; drawCart(); } }, icon(typeIcon[k] || 'grid', 18), n))),
         st.type === 'DINE_IN' ? fld('الطاولة', h('select', { onchange: e => { st.table = e.target.value; } }, h('option', { value: '' }, 'اختر الطاولة'), tables.map(x => h('option', { value: x.number, selected: x.number === st.table }, `طاولة ${x.number}${x.orders.length ? ' (مشغولة)' : ''}`)))) : null,
         delivery ? custSearch() : null,
-        h('div', { class: 'fields' },
+        st.type === 'TAKEAWAY' ? null : h('div', { class: 'fields' },
           fld('اسم العميل', h('input', { placeholder: 'اسم العميل', value: st.name, oninput: e => { st.name = e.target.value; } })),
           fld('رقم الهاتف', h('input', { type: 'tel', inputmode: 'tel', placeholder: 'رقم الهاتف', value: st.phone, oninput: e => { st.phone = e.target.value; } })),
           delivery ? fld('العنوان', h('input', { placeholder: 'عنوان التوصيل', value: st.addr, oninput: e => { st.addr = e.target.value; } })) : null,
@@ -136,16 +136,30 @@
       h('div', { class: 'pn-head' }, icon('cart', 24), h('h3', null, 'الأصناف المضافة'), count ? h('span', { class: 'cnt' }, count) : null),
       h('div', { class: 'cart-scroll ci-list' }, st.cart.length ? st.cart.map(cartLine)
         : h('div', { class: 'empty-cart' }, h('div', { class: 'ec-ico' }, icon('cart', 44)), h('strong', null, 'لم يتم إضافة أي أصناف بعد'), h('small', null, 'اختر المنتجات من القائمة لإضافتها إلى الطلب'))),
-      h('div', { class: 'cart-foot' }, totalsBox,
+      h('div', { class: 'cart-foot' }, couponBox, totalsBox,
         h('button', { class: 'btn checkout', disabled: !st.cart.length, onclick: () => submit(true) }, icon('card', 20), 'إتمام الطلب والدفع')));
     cartBox.append(details, items);
     drawTotals(); tick();
   }
   const totalsBox = h('div', { class: 'totals' });
+  // Discount code: the owner creates codes in Settings (code + percentage); the cashier types one here.
+  const couponBox = h('div', { class: 'coupon' }); let cpTxt = '';
+  async function applyCoupon() {
+    const code = cpTxt.trim(); if (!code) return;
+    try { st.coupon = await API.get('/coupons/validate' + qs({ code })); cpTxt = ''; drawCoupon(); drawTotals(); toast('تم تطبيق الخصم'); } catch (e) { toast(e.message, true); }
+  }
+  function drawCoupon() {
+    clear(couponBox);
+    if (st.coupon) return couponBox.append(h('div', { class: 'cp-on' }, h('span', null, `كود ${st.coupon.code} — خصم ${st.coupon.percent}%`), h('button', { type: 'button', class: 'cp-x', onclick: () => { st.coupon = null; drawCoupon(); drawTotals(); } }, 'إلغاء')));
+    couponBox.append(h('div', { class: 'cp-row' },
+      h('input', { placeholder: 'كود الخصم', value: cpTxt, oninput: e => { cpTxt = e.target.value; }, onkeydown: e => { if (e.key === 'Enter') { e.preventDefault(); applyCoupon(); } } }),
+      h('button', { type: 'button', class: 'btn sm secondary', onclick: applyCoupon }, 'تطبيق')));
+  }
+  drawCoupon();
   function drawTotals() {
     const t = totals(), rate = Number(mods.taxRate || 0); clear(totalsBox);
     const row = (l, v) => h('div', { class: 'tr' }, h('span', null, l), h('b', null, v));
-    totalsBox.append(row('المجموع', money(t.sub)), row('خصم', (t.disc ? '-' : '') + money(t.disc)), rate ? row(`الضريبة (${rate}%)`, money(t.tax)) : null, st.type === 'DELIVERY' ? row('التوصيل', money(t.fee)) : null,
+    totalsBox.append(row('المجموع', money(t.sub)), row(st.coupon ? `خصم (${st.coupon.percent}%)` : 'خصم', (t.disc ? '-' : '') + money(t.disc)), rate ? row(`الضريبة (${rate}%)`, money(t.tax)) : null, st.type === 'DELIVERY' ? row('التوصيل', money(t.fee)) : null,
       h('div', { class: 'grand', title: 'الإجمالي النهائي يحسبه الخادم' }, h('span', { class: 'g-l' }, icon('doc', 22), 'الإجمالي الكلي'), h('b', null, money(t.total))));
   }
   function openRegister() {
@@ -158,27 +172,27 @@
   async function submit(payNow) {
     if (st.type === 'DINE_IN' && !st.table && mods.tables !== false) return toast('اختر الطاولة', true);
     let pay = null;
-    if (payNow) { // the payment dialog also takes the discount and the order notes; nothing is created if it is dismissed
-      pay = await collectPayment(totals().total, { totalFor: d => totalsFor(d).total, discount: st.discount, notes: st.notes });
+    if (payNow) { // the payment dialog takes the order notes; nothing is created if it is dismissed
+      pay = await collectPayment(totals().total, { totalFor: () => totals().total, notes: st.notes });
       if (!pay) return;
-      st.discount = pay.discount; st.notes = pay.notes;
+      st.notes = pay.notes;
     }
-    const body = { type: st.type, branchId: st.branchId, customerName: st.name || undefined, customerPhone: st.phone || undefined, deliveryAddress: st.addr || undefined, notes: st.notes || undefined,
-      discount: st.discount || undefined, zoneId: st.type === 'DELIVERY' ? st.zoneId || undefined : undefined, tableNumber: st.type === 'DINE_IN' ? st.table : undefined,
+    const body = { type: st.type, branchId: st.branchId, customerName: st.type === 'TAKEAWAY' ? undefined : st.name || undefined, customerPhone: st.type === 'TAKEAWAY' ? undefined : st.phone || undefined, deliveryAddress: st.addr || undefined, notes: st.notes || undefined,
+      couponCode: st.coupon ? st.coupon.code : undefined, zoneId: st.type === 'DELIVERY' ? st.zoneId || undefined : undefined, tableNumber: st.type === 'DINE_IN' ? st.table : undefined,
       items: st.cart.map(l => ({ productId: l.productId, quantity: l.qty, notes: l.notes || undefined, options: l.options.map(o => ({ group: o.group, choice: o.choice })) })) };
     try {
       const order = await API.post('/orders', body);
       if (pay) {
         const lines = pay.lines.map(l => ({ ...l })), r2 = x => Math.round(x * 100) / 100, sum = r2(lines.reduce((a, l) => a + l.amount, 0));
         // a full payment follows the server's authoritative total (cent rounding); a deliberate part-payment is left as entered
-        if (Math.abs(sum - r2(totalsFor(st.discount).total)) < 0.02) lines[lines.length - 1].amount = r2(lines[lines.length - 1].amount + Number(order.total) - sum);
+        if (Math.abs(sum - r2(totals().total)) < 0.02) lines[lines.length - 1].amount = r2(lines[lines.length - 1].amount + Number(order.total) - sum);
         await API.post(`/orders/${order.id}/pay`, { payments: lines });
         await sendToKitchen(order); // paid -> goes to the kitchen
         toast(`تم الدفع وأُرسل الطلب #${order.number} للمطبخ`);
       } else { await sendToKitchen(order); toast(`تم إرسال الطلب #${order.number} للمطبخ`); }
       KDS.refresh();
       if (await confirmBox('طباعة الإيصال؟')) await printReceipt(order, brand);
-      st.cart = []; st.discount = 0; st.notes = ''; st.name = ''; st.phone = ''; st.addr = ''; await loadTables(); drawCart();
+      st.cart = []; st.coupon = null; drawCoupon(); st.notes = ''; st.name = ''; st.phone = ''; st.addr = ''; await loadTables(); drawCart();
     } catch (e) { fail(e); }
   }
   // Live clock (top bar): current time and date, updates every second.

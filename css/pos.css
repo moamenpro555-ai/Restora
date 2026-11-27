@@ -58,3 +58,8 @@
 .cust-res{display:flex;flex-direction:column;gap:4px;margin-top:4px}
 .cust-item{display:block;text-align:start;width:100%;padding:8px 10px;border:1px solid var(--border,#e5e7eb);border-radius:10px;background:var(--surface,#fff);cursor:pointer;font:inherit;color:inherit}
 .cust-item:hover{border-color:var(--primary,#d97706)}
+
+.coupon{margin-bottom:10px}
+.coupon .cp-row{display:flex;gap:8px}.coupon .cp-row input{flex:1;min-width:0;direction:ltr;text-align:center;letter-spacing:1px}
+.coupon .cp-on{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;border-radius:12px;background:color-mix(in srgb,var(--primary) 10%,var(--surface2));font-weight:700}
+.coupon .cp-x{border:0;background:none;color:var(--danger,#dc2626);cursor:pointer;font:inherit;font-weight:700}
