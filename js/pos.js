@@ -103,7 +103,17 @@
       h('div', { class: 'ci-img' }, l.img ? h('img', { src: l.img, alt: '', loading: 'lazy' }) : icon('chef', 30)),
       h('button', { class: 'ci-note' + (l.notes ? ' has' : ''), type: 'button', title: 'ملاحظة تظهر للمطبخ', onclick: () => lineNote(l) }, icon('note', 16), l.notes || 'إضافة ملاحظة للمطبخ'));
   }
+  // Re-render the cart without losing scroll positions (page, cart panel and the item list).
   function drawCart() {
+    const outer = []; for (let n = cartBox; n; n = n.parentElement) if (n.scrollTop) outer.push([n, n.scrollTop]);
+    const inner = [...cartBox.querySelectorAll('.cart-scroll')].map(e => e.scrollTop), wx = window.scrollX, wy = window.scrollY;
+    const hgt = cartBox.offsetHeight; if (hgt) cartBox.style.minHeight = hgt + 'px'; // keep height so the browser doesn't clamp the scroll while rebuilding
+    renderCart();
+    cartBox.querySelectorAll('.cart-scroll').forEach((e, i) => { if (inner[i]) e.scrollTop = inner[i]; });
+    outer.forEach(([n, t]) => { n.scrollTop = t; });
+    window.scrollTo(wx, wy); cartBox.style.minHeight = '';
+  }
+  function renderCart() {
     drawShift(); clear(cartBox);
     grid.querySelectorAll('.pcard').forEach(c => c.classList.toggle('sel', st.cart.some(l => l.productId === c.dataset.id))); // highlight products already in the cart
     const delivery = st.type === 'DELIVERY', count = st.cart.reduce((n, l) => n + l.qty, 0);
