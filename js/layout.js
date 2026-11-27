@@ -1,7 +1,7 @@
 // App shell: sidebar (filtered by permissions), topbar, theme, notifications, branding, live socket.
 const NAV = [
   ['dashboard.html', 'لوحة التحكم', 'orders.view'], ['pos.html', 'الكاشير', 'orders.create'], ['orders.html', 'سجل المبيعات', 'orders.view'],
-  ['kitchen.html', 'المطبخ (KDS)', 'kitchen.view'], ['tables.html', 'الطاولات', 'tables.manage'], ['reservations.html', 'الحجوزات', 'reservations.manage'],
+  ['tables.html', 'الطاولات', 'tables.manage'], ['reservations.html', 'الحجوزات', 'reservations.manage'],
   ['products.html', 'المنتجات والتصنيفات', 'products.view'], ['inventory.html', 'المخزون والوصفات', 'inventory.manage'],
   ['customers.html', 'العملاء', 'customers.manage'], ['employees.html', 'الموظفون والصلاحيات', 'employees.manage'], ['branches.html', 'الفروع', 'branches.manage'],
   ['finance.html', 'المالية', 'finance.view'], ['reports.html', 'التقارير', 'reports.view'], ['settings.html', 'الإعدادات والواجهة', 'settings.manage'],
@@ -31,6 +31,7 @@ async function boot(title, perm, opts = {}) {
     h('nav', null, nav.map(([href, label]) => h('a', { href, class: href === here ? 'active' : '' }, icon(NAV_ICON[href] || 'grid', 20), h('span', null, label)))));
   if (opts.support) side.append(h('div', { class: 'side-support' }, h('div', { class: 'ss-top' }, icon('support', 34), h('div', null, h('strong', null, 'دعم فني'), h('small', null, 'متاح دائمًا لمساعدتك'))), h('a', { class: 'ss-btn', href: 'support.html' }, 'تواصل معنا', icon('arrowl', 18))));
   const kdsBtn = !isAdmin && KDS.allowed() ? KDS.button() : null;
+  const kdsPage = !isAdmin && ME.permissions.includes('kitchen.view') ? KDS.pageLink(here === 'kitchen.html') : null;
   const bell = h('button', { class: 'icon-btn bell', title: 'الإشعارات', onclick: showNotifs }, icon('bell'));
   const themeBtn = h('button', { class: 'icon-btn', title: 'الوضع الليلي' });
   const paintTheme = () => { clear(themeBtn); themeBtn.append(icon(document.documentElement.dataset.theme === 'dark' ? 'sun' : 'moon')); };
@@ -55,7 +56,7 @@ async function boot(title, perm, opts = {}) {
     h('div', { class: 'brand-top' }, h('span', { class: 'brand-ico' }, icon('chef', 38)), h('div', null, h('strong', null, 'Restora'), h('small', null, 'Multi-Restaurant Platform'))),
     h('div', { class: 'tagline' }, h('span', { class: 'tg-deco' + (opts.deco ? ' ' + opts.deco : '') }), h('span', { class: 'tg-text' }, tagline)),
     h('div', { id: 'bar-slot', class: 'bar-slot' }),
-    themeBtn, kdsBtn, isAdmin ? null : bell, h('div', { class: 'user-wrap' }, userBtn, userMenu));
+    themeBtn, kdsPage, kdsBtn, isAdmin ? null : bell, h('div', { class: 'user-wrap' }, userBtn, userMenu));
   const view = h('main', { id: 'view' });
   const st = ME.tenant && ME.tenant.status;
   const banner = st === 'EXPIRED' ? h('div', { class: 'banner' }, 'اشتراكك منتهي. ', h('a', { href: 'subscriptions.html' }, 'جدّد الآن')) : st === 'SUSPENDED' ? h('div', { class: 'banner' }, 'الحساب موقوف. تواصل مع الدعم.') : null;
@@ -68,11 +69,11 @@ async function boot(title, perm, opts = {}) {
   document.body.append(h('div', { class: 'app' }, bar, banner, h('div', { class: 'shell' }, side, h('div', { class: 'main-col' }, view, foot))), h('div', { id: 'print-area' }));
   if (perm && !ME.permissions.includes(perm)) {
     // a role without dashboard access lands on the first page it is allowed to use
-    const first = nav.find(n => n[0] !== here);
+    const first = nav.find(n => n[0] !== here) || (ME.permissions.includes('kitchen.view') && here !== 'kitchen.html' ? ['kitchen.html'] : null);
     if (here === 'dashboard.html' && first) { location.replace(first[0]); return null; }
     view.append(h('div', { class: 'card empty' }, 'لا تملك صلاحية الوصول لهذه الصفحة')); return null; }
   if (sbHidden()) document.querySelector('.app').classList.add('sb-hidden');
-  if (kdsBtn) KDS.start();
+  if (!isAdmin && KDS.allowed()) KDS.start();
   if (!isAdmin) { refreshBell(bell); setInterval(() => refreshBell(bell), 60000); }
   return view;
 }
@@ -181,7 +182,11 @@ const KDS = (() => {
     badge.style.display = 'none';
     return wrap;
   }
-  return { allowed, start, view, button, pinned, setPinned, refresh, subscribe };
+  // Separate top-bar icon that opens the kitchen screen itself (kitchen.html) as a normal page.
+  function pageLink(active) {
+    return h('a', { class: 'icon-btn kds-page' + (active ? ' active' : ''), href: 'kitchen.html', title: 'شاشة المطبخ' }, icon('cloche', 22));
+  }
+  return { allowed, start, view, button, pageLink, pinned, setPinned, refresh, subscribe };
 })();
 
 // Cashier (POS) orders wait in NEW until they are paid or explicitly sent; this releases one to the kitchen (CONFIRMED).

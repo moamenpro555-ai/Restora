@@ -466,3 +466,7 @@
   .pos:not(.with-kds) .cart-wrap .cart-scroll{flex:1;min-height:0;overflow-y:auto}
   .pos:not(.with-kds) .cart-wrap .cart-items .cart-foot{position:static}
 }
+
+/* top-bar kitchen screen link */
+a.kds-page{display:inline-grid;place-items:center;text-decoration:none;color:var(--text)}
+.kds-page.active{background:var(--primary);color:#fff}
