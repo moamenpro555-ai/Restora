@@ -14,6 +14,18 @@
   let zones = []; try { zones = (await API.get('/delivery-zones')).filter(z => z.isActive); } catch {}
 
   const grid = h('div', { class: 'grid' }), catBar = h('div', { class: 'cats' }), cartBox = h('div', { class: 'card cart' });
+  // category bar: arrows at both ends, mouse wheel and click-and-drag all scroll it sideways
+  const dir = () => (getComputedStyle(catBar).direction === 'rtl' ? -1 : 1);
+  const arrow = (side, name) => h('button', { type: 'button', class: 'cat-arrow ' + side, 'aria-label': side === 'l' ? 'السابق' : 'التالي', onclick: () => catBar.scrollBy({ left: (side === 'l' ? -1 : 1) * 320, behavior: 'smooth' }) }, icon(name, 18));
+  const catWrap = h('div', { class: 'cats-wrap' }, arrow('l', 'chevl'), catBar, arrow('r', 'chevr'));
+  const catOverflow = () => catWrap.classList.toggle('scrollable', catBar.scrollWidth > catBar.clientWidth + 4);
+  window.addEventListener('resize', catOverflow);
+  catBar.addEventListener('wheel', e => { if (catBar.scrollWidth <= catBar.clientWidth || Math.abs(e.deltaY) < Math.abs(e.deltaX)) return; e.preventDefault(); catBar.scrollLeft += dir() * e.deltaY; }, { passive: false });
+  let drag = null, moved = false;
+  catBar.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse' && e.button === 0) { drag = { x: e.clientX, s: catBar.scrollLeft }; moved = false; } });
+  window.addEventListener('pointermove', e => { if (!drag) return; const dx = e.clientX - drag.x; if (Math.abs(dx) > 5) { moved = true; catBar.classList.add('dragging'); } if (moved) catBar.scrollLeft = drag.s - dx; });
+  window.addEventListener('pointerup', () => { drag = null; setTimeout(() => catBar.classList.remove('dragging'), 0); });
+  catBar.addEventListener('click', e => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
   const key = l => l.productId + JSON.stringify(l.options) + (l.notes || '');
   const lineTotal = l => (l.price + l.options.reduce((s, o) => s + o.price, 0)) * l.qty;
   const totals = () => totalsFor(st.discount);
@@ -26,7 +38,7 @@
   }
   const catIcon = n => (/مشروب|عصير|قهوة|شاي|drink|juice|coffee/i.test(n) ? 'cup' : /حلو|كيك|dessert|cake|sweet/i.test(n) ? 'cake' : /وجب|رئيس|main|meal/i.test(n) ? 'cloche' : 'grid');
   function drawProducts() {
-    clear(catBar); clear(grid);
+    clear(catBar); clear(grid); setTimeout(catOverflow, 0);
     [['all', 'الكل'], ...cats.map(c => [c.id, c.name])].forEach(([id, n]) => catBar.append(h('button', { class: 'pill' + (st.cat === id ? ' on' : ''), onclick: () => { st.cat = id; drawProducts(); } }, id === 'all' ? null : icon(catIcon(n), 18), n)));
     const list = products.filter(p => (st.cat === 'all' || p.categoryId === st.cat) && p.name.includes(st.q));
     if (!list.length) grid.append(h('div', { class: 'empty' }, 'لا منتجات'));
@@ -155,7 +167,7 @@
   }
   const slot = $('#bar-slot'); if (slot) slot.append(shiftBox, timerChip);
   clear(v);
-  v.append(h('div', { class: 'pos' }, h('div', { class: 'pos-products' }, h('div', { class: 'search' }, h('input', { placeholder: 'ابحث عن منتج...', oninput: e => { st.q = e.target.value; drawProducts(); } }), h('span', { class: 'search-ico' }, icon('search', 20))), catBar, grid), cartBox));
+  v.append(h('div', { class: 'pos' }, h('div', { class: 'pos-products' }, h('div', { class: 'search' }, h('input', { placeholder: 'ابحث عن منتج...', oninput: e => { st.q = e.target.value; drawProducts(); } }), h('span', { class: 'search-ico' }, icon('search', 20))), catWrap, grid), cartBox));
   drawProducts(); drawCart();
   // Pinned kitchen list beside the cart (toggled from the kitchen button in the top bar).
   const posEl = v.querySelector('.pos'); let kds = null;
