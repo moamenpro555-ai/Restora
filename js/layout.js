@@ -23,7 +23,8 @@ async function boot(title, perm, opts = {}) {
   if (!isAdmin) { try { branding = await API.get('/settings/branding'); applyBranding(branding); } catch {} }
   document.documentElement.style.setProperty('--font', `'${(branding && branding.fontFamily) || 'Cairo'}','Cairo',system-ui,sans-serif`);
 
-  const nav = (isAdmin ? ADMIN_NAV : NAV).filter(n => !n[2] || ME.permissions.includes(n[2]));
+  const resOn = !!(ME.tenant && (ME.tenant.modules || {}).reservationsEnabled);
+  const nav = (isAdmin ? ADMIN_NAV : NAV).filter(n => (!n[2] || ME.permissions.includes(n[2])) && (n[0] !== 'reservations.html' || resOn));
   const here = location.pathname.split('/').pop();
   const logoImg = branding && branding.logoUrl ? h('img', { src: branding.logoUrl, alt: '', class: 'logo-img' }) : null;
   const side = h('aside', { class: 'sidebar', id: 'sidebar' },
@@ -71,6 +72,7 @@ async function boot(title, perm, opts = {}) {
     opts.foot.brand ? h('div', { class: 'foot-brand' }, icon('chef', 46), h('div', null, h('strong', null, 'Restora'), h('small', null, 'Smart Restaurant Platform'))) : null) : null;
   clear(document.body);
   document.body.append(h('div', { class: 'app' + (standalone ? ' standalone' : '') }, bar, banner, h('div', { class: 'shell' }, standalone ? null : side, h('div', { class: 'main-col' }, view, foot))), h('div', { id: 'print-area' }));
+  if (here === 'reservations.html' && !isAdmin && !resOn) { view.append(h('div', { class: 'card empty' }, 'خدمة الحجوزات غير مفعّلة لحسابك. تواصل مع الدعم لتفعيلها.')); return null; }
   if (perm && !ME.permissions.includes(perm)) {
     // a role without dashboard access lands on the first page it is allowed to use
     const first = nav.find(n => n[0] !== here) || (ME.permissions.includes('kitchen.view') && here !== 'kitchen.html' ? ['kitchen.html'] : null);

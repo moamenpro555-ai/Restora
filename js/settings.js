@@ -31,7 +31,7 @@
   const genForm = h('form', { class: 'card two', onsubmit: async e => {
     e.preventDefault(); const f = e.target; const c = n => f[n].checked; const nu = n => Number(f[n].value || 0);
     try { await API.put('/settings/general', { name: f.name.value, slug: f.slug.value, currency: f.currency.value.toUpperCase(),
-      modules: { tables: c('tables'), delivery: c('delivery'), online: c('online'), qrOrdering: c('qrOrdering'), reservations: c('reservations'), preventNegativeStock: c('preventNegativeStock'),
+      modules: { tables: c('tables'), delivery: c('delivery'), online: c('online'), qrOrdering: c('qrOrdering'), preventNegativeStock: c('preventNegativeStock'),
         taxRate: nu('taxRate'), deliveryFee: nu('deliveryFee'), minOrder: nu('minOrder'), loyaltyRate: nu('loyaltyRate'), deductOn: f.deductOn.value, timezone: f.timezone.value || 'Africa/Cairo' } }); toast('تم الحفظ'); setTimeout(() => location.reload(), 600); } catch (err) { fail(err); }
   } },
     h('h3', { style: 'grid-column:1/-1' }, 'العملة والضريبة والتشغيل'),
@@ -41,7 +41,7 @@
     h('div', null, h('label', null, 'نقاط الولاء: كل كم جنيه = نقطة (0 = معطّل)'), h('input', { name: 'loyaltyRate', type: 'number', min: '0', value: m.loyaltyRate || 0 })),
     h('div', null, h('label', null, 'المنطقة الزمنية (لمواعيد العمل)'), h('input', { name: 'timezone', value: m.timezone || 'Africa/Cairo' })),
     h('div', null, h('label', null, 'خصم المخزون عند'), h('select', { name: 'deductOn' }, [['CONFIRMED', 'تأكيد الطلب'], ['PREPARING', 'بدء التحضير'], ['COMPLETED', 'اكتمال الطلب']].map(([k, n]) => h('option', { value: k, selected: (m.deductOn || 'COMPLETED') === k }, n)))),
-    h('div', { style: 'grid-column:1/-1' }, chk('tables', 'إدارة الطاولات', false), chk('delivery', 'التوصيل'), chk('online', 'الطلب أونلاين (استلام/توصيل)'), chk('qrOrdering', 'الطلب عبر QR من الطاولة'), chk('reservations', 'الحجوزات', false), chk('preventNegativeStock', 'منع المخزون السالب (يرفض إتمام الطلب)', false)),
+    h('div', { style: 'grid-column:1/-1' }, chk('tables', 'إدارة الطاولات', false), chk('delivery', 'التوصيل'), chk('online', 'الطلب أونلاين (استلام/توصيل)'), chk('qrOrdering', 'الطلب عبر QR من الطاولة'), chk('preventNegativeStock', 'منع المخزون السالب (يرفض إتمام الطلب)', false)),
     h('button', { class: 'btn', style: 'grid-column:1/-1' }, 'حفظ الإعدادات'));
   const link = location.href.replace(/[^/]*$/, '') + 'menu.html?restaurant=' + encodeURIComponent(g.slug); const qrBox = h('div');
   const pw = h('form', { class: 'card', onsubmit: async e => { e.preventDefault(); try { await API.post('/auth/change-password', { current: e.target.cur.value, next: e.target.nxt.value }); toast('تم تغيير كلمة المرور'); e.target.reset(); } catch (err) { fail(err); } } },
