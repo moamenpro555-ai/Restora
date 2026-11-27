@@ -22,18 +22,20 @@
       { label: '#', render: c => rows.indexOf(c) + 1 },
       { label: 'اسم العميل', cls: 'start', render: c => h('span', { class: 'ic-line' }, avatar(c), c.name) },
       { label: 'رقم الهاتف', render: c => h('span', { class: 'ltr' }, c.phone) },
-      { label: 'العنوان', render: c => c.address || '-' }, { label: 'عدد الطلبات', render: c => c._count.orders }, { label: 'نقاط الولاء', render: c => c.loyaltyPoints },
+      { label: 'العنوان', render: c => c.address || '-' }, { label: 'المنطقة', render: c => c.zone ? c.zone.name : '-' }, { label: 'عدد الطلبات', render: c => c._count.orders }, { label: 'نقاط الولاء', render: c => c.loyaltyPoints },
       { label: 'إجمالي المشتريات', render: c => h('span', { class: 'ltr' }, money(c.totalSpent)) },
       { label: 'الحالة', render: c => c._count.orders > 0 ? chip('نشط', 'ok', 'dot') : chip('جديد', 'warn', 'dot') },
       { label: 'إجراءات', render: c => h('div', { class: 'act-row' }, h('button', { class: 'ibtn blue', title: 'الملف', onclick: () => details(c.id) }, icon('eye', 18)), h('button', { class: 'ibtn orange', title: 'تعديل', onclick: () => form(c) }, icon('edit', 18))) }],
       slice, 'لا عملاء', 'rt'), rows.length ? pager(rows.length, PAGE, page, n => { page = n; draw(); }, `إجمالي العملاء: ${rows.length} عميل`) : null));
   }
-  const form = c => formModal({ title: c ? 'تعديل عميل' : 'عميل جديد', values: c || {}, fields: [{ name: 'name', label: 'الاسم', required: true }, { name: 'phone', label: 'الهاتف', required: true }, { name: 'address', label: 'العنوان' }, { name: 'notes', label: 'ملاحظات', type: 'textarea' }],
-    onSubmit: async d => { d.address = (d.address || '').trim() || null; if (c) await API.patch('/customers/' + c.id, d); else await API.post('/customers', d); load(); } });
+  let zones = []; API.get('/delivery-zones').then(r => { zones = r; }).catch(() => {});
+  const form = c => formModal({ title: c ? 'تعديل عميل' : 'عميل جديد', values: c || {}, fields: [{ name: 'name', label: 'الاسم', required: true }, { name: 'phone', label: 'الهاتف', required: true }, { name: 'address', label: 'العنوان' },
+    { name: 'zoneId', label: 'المنطقة', type: 'select', options: [{ value: '', label: '— بدون —' }, ...zones.filter(z => z.isActive || (c && z.id === c.zoneId)).map(z => ({ value: z.id, label: `${z.name} - ${z.fee}` }))] }, { name: 'notes', label: 'ملاحظات', type: 'textarea' }],
+    onSubmit: async d => { d.address = (d.address || '').trim() || null; d.zoneId = d.zoneId || null; if (c) await API.patch('/customers/' + c.id, d); else await API.post('/customers', d); load(); } });
   async function details(id) {
     try {
       const c = await API.get('/customers/' + id);
-      modal(c.name, h('div', null, h('p', null, `${c.phone}${c.address ? ' — ' + c.address : ''} — إجمالي الإنفاق: ${money(c.totalSpent)} — النقاط: ${c.loyaltyPoints}`), c.notes ? h('p', { class: 'muted' }, c.notes) : null,
+      modal(c.name, h('div', null, h('p', null, `${c.phone}${c.address ? ' — ' + c.address : ''}${c.zone ? ' — المنطقة: ' + c.zone.name : ''} — إجمالي الإنفاق: ${money(c.totalSpent)} — النقاط: ${c.loyaltyPoints}`), c.notes ? h('p', { class: 'muted' }, c.notes) : null,
         h('button', { class: 'btn sm', onclick: () => formModal({ title: 'تعديل نقاط', fields: [{ name: 'points', label: 'النقاط (+ إضافة / - استبدال)', type: 'number', required: true }, { name: 'reason', label: 'السبب', required: true }], onSubmit: async d => { await API.post(`/customers/${id}/loyalty`, d); load(); } }) }, 'تعديل النقاط'),
         h('h3', null, 'آخر الطلبات'), c.orders.map(o => h('div', { class: 'cart-line' }, h('span', null, `#${o.number} ${dt(o.createdAt)}`), h('span', null, statusBadge(o.status), ' ', money(o.total))))), { wide: true });
     } catch (e) { fail(e); }
