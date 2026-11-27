@@ -1,5 +1,5 @@
 (async () => {
-  const v = await boot('شاشة المطبخ', 'kitchen.view'); if (!v) return;
+  const v = await boot('شاشة المطبخ', 'kitchen.view', { standalone: true }); if (!v) return;
   const can = p => ME.permissions.includes(p);
   let station = '', tab = 'all', orders = [], served = [], known = new Set(), first = true;
   const grid = h('div', { class: 'kds' });

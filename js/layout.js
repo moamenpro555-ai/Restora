@@ -31,7 +31,7 @@ async function boot(title, perm, opts = {}) {
     h('nav', null, nav.map(([href, label]) => h('a', { href, class: href === here ? 'active' : '' }, icon(NAV_ICON[href] || 'grid', 20), h('span', null, label)))));
   if (opts.support) side.append(h('div', { class: 'side-support' }, h('div', { class: 'ss-top' }, icon('support', 34), h('div', null, h('strong', null, 'دعم فني'), h('small', null, 'متاح دائمًا لمساعدتك'))), h('a', { class: 'ss-btn', href: 'support.html' }, 'تواصل معنا', icon('arrowl', 18))));
   const kdsBtn = !isAdmin && KDS.allowed() ? KDS.button() : null;
-  const kdsPage = !isAdmin && ME.permissions.includes('kitchen.view') ? KDS.pageLink(here === 'kitchen.html') : null;
+  const kdsPage = !isAdmin && ME.permissions.includes('kitchen.view') ? KDS.pageLink(false) : null;
   const bell = h('button', { class: 'icon-btn bell', title: 'الإشعارات', onclick: showNotifs }, icon('bell'));
   const themeBtn = h('button', { class: 'icon-btn', title: 'الوضع الليلي' });
   const paintTheme = () => { clear(themeBtn); themeBtn.append(icon(document.documentElement.dataset.theme === 'dark' ? 'sun' : 'moon')); };
@@ -51,7 +51,11 @@ async function boot(title, perm, opts = {}) {
     const app = document.querySelector('.app'), hide = !app.classList.contains('sb-hidden');
     app.classList.toggle('sb-hidden', hide); try { localStorage.setItem(sbKey, hide ? '1' : '0'); } catch {}
   }
-  const bar = h('header', { class: 'topbar' },
+  const standalone = !!opts.standalone;
+  const fsBtn = h('button', { class: 'icon-btn', title: 'ملء الشاشة', onclick: () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen && document.documentElement.requestFullscreen() }, icon('expand', 22));
+  const bar = standalone ? h('header', { class: 'topbar' },
+    h('div', { class: 'brand-top' }, h('span', { class: 'brand-ico' }, icon('chef', 38)), h('div', null, h('strong', { style: 'direction:rtl' }, 'شاشة المطبخ'), h('small', null, ME.tenant.name))),
+    h('div', { class: 'tagline' }), fsBtn, themeBtn, h('div', { class: 'user-wrap' }, userBtn, userMenu)) : h('header', { class: 'topbar' },
     h('button', { class: 'icon-btn menu-btn', onclick: toggleSide, title: 'القائمة' }, icon('menu', 24)),
     h('div', { class: 'brand-top' }, h('span', { class: 'brand-ico' }, icon('chef', 38)), h('div', null, h('strong', null, 'Restora'), h('small', null, 'Multi-Restaurant Platform'))),
     h('div', { class: 'tagline' }, h('span', { class: 'tg-deco' + (opts.deco ? ' ' + opts.deco : '') }), h('span', { class: 'tg-text' }, tagline)),
@@ -60,21 +64,21 @@ async function boot(title, perm, opts = {}) {
   const view = h('main', { id: 'view' });
   const st = ME.tenant && ME.tenant.status;
   const banner = st === 'EXPIRED' ? h('div', { class: 'banner' }, 'اشتراكك منتهي. ', h('a', { href: 'subscriptions.html' }, 'جدّد الآن')) : st === 'SUSPENDED' ? h('div', { class: 'banner' }, 'الحساب موقوف. تواصل مع الدعم.') : null;
-  document.title = title + ' | Restora';
+  document.title = standalone ? title + ' | ' + ME.tenant.name : title + ' | Restora';
   const foot = opts.foot ? h('footer', { class: 'app-foot' },
     h('div', { class: 'foot-pill' }, h('span', null, opts.foot.text), icon(opts.foot.icon || 'heart', 20)),
     opts.foot.side ? h('div', { class: 'foot-side' }, opts.foot.side) : null,
     opts.foot.brand ? h('div', { class: 'foot-brand' }, icon('chef', 46), h('div', null, h('strong', null, 'Restora'), h('small', null, 'Smart Restaurant Platform'))) : null) : null;
   clear(document.body);
-  document.body.append(h('div', { class: 'app' }, bar, banner, h('div', { class: 'shell' }, side, h('div', { class: 'main-col' }, view, foot))), h('div', { id: 'print-area' }));
+  document.body.append(h('div', { class: 'app' + (standalone ? ' standalone' : '') }, bar, banner, h('div', { class: 'shell' }, standalone ? null : side, h('div', { class: 'main-col' }, view, foot))), h('div', { id: 'print-area' }));
   if (perm && !ME.permissions.includes(perm)) {
     // a role without dashboard access lands on the first page it is allowed to use
     const first = nav.find(n => n[0] !== here) || (ME.permissions.includes('kitchen.view') && here !== 'kitchen.html' ? ['kitchen.html'] : null);
     if (here === 'dashboard.html' && first) { location.replace(first[0]); return null; }
     view.append(h('div', { class: 'card empty' }, 'لا تملك صلاحية الوصول لهذه الصفحة')); return null; }
   if (sbHidden()) document.querySelector('.app').classList.add('sb-hidden');
-  if (!isAdmin && KDS.allowed()) KDS.start();
-  if (!isAdmin) { refreshBell(bell); setInterval(() => refreshBell(bell), 60000); }
+  if (!isAdmin && !standalone && KDS.allowed()) KDS.start();
+  if (!isAdmin && !standalone) { refreshBell(bell); setInterval(() => refreshBell(bell), 60000); }
   return view;
 }
 async function refreshBell(bell) {
@@ -98,6 +102,11 @@ function connectSocket(handlers) {
 // ---- Live kitchen orders: top-bar button (with a count) + a list that can be pinned beside the POS cart ----
 // Orders placed in the POS reach the kitchen at once (they are CONFIRMED on creation); every status change made here is the same API call the
 // kitchen screen uses, and both screens refresh through the tenant socket room (polling as a fallback).
+// Opens the kitchen screen as its own page (separate tab/window); a second click focuses the same one instead of opening another.
+function openKitchen(e) {
+  if (e) e.preventDefault();
+  const w = window.open('kitchen.html', 'restora-kitchen'); if (w) w.focus();
+}
 const KDS = (() => {
   const subs = new Set(); let orders = [], loaded = false, started = false, sock = null, seen = new Set(), pend = null;
   const can = p => ME.permissions.includes(p);
@@ -158,7 +167,7 @@ const KDS = (() => {
     const count = h('span', { class: 'kv-c' }), body = h('div', { class: 'kv-b' });
     const pinBtn = h('button', { class: 'icon-btn kv-pin' + (opts.pinnedView ? ' on' : ''), title: opts.pinnedView ? 'إلغاء التثبيت' : 'تثبيت بجانب السلة في الكاشير', onclick: () => setPinned(!pinned()) }, icon('pin', 18));
     const head = h('div', { class: 'kv-h' }, icon('chef', 22), h('b', null, 'طلبات المطبخ الحالية'), count, h('span', { style: 'flex:1' }), pinBtn);
-    const foot = !opts.pinnedView && can('kitchen.view') ? h('a', { class: 'kv-f', href: 'kitchen.html' }, 'فتح شاشة المطبخ', icon('arrowl', 16)) : null;
+    const foot = !opts.pinnedView && can('kitchen.view') ? h('a', { class: 'kv-f', href: 'kitchen.html', onclick: openKitchen }, 'فتح شاشة المطبخ', icon('arrowl', 16)) : null;
     const el = h('div', { class: 'kv' + (opts.pinnedView ? ' kv-side' : '') }, head, body, foot);
     const paint = list => { count.textContent = list.length; clear(body); body.append(list.length ? list.map(item) : h('div', { class: 'empty' }, 'لا توجد طلبات في المطبخ حاليًا')); };
     const off = subscribe(paint);
@@ -184,7 +193,7 @@ const KDS = (() => {
   }
   // Separate top-bar icon that opens the kitchen screen itself (kitchen.html) as a normal page.
   function pageLink(active) {
-    return h('a', { class: 'icon-btn kds-page' + (active ? ' active' : ''), href: 'kitchen.html', title: 'شاشة المطبخ' }, icon('cloche', 22));
+    return h('a', { class: 'icon-btn kds-page' + (active ? ' active' : ''), href: 'kitchen.html', target: 'restora-kitchen', title: 'شاشة المطبخ (صفحة منفصلة)', onclick: openKitchen }, icon('cloche', 22));
   }
   return { allowed, start, view, button, pageLink, pinned, setPinned, refresh, subscribe };
 })();
