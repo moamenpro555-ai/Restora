@@ -191,7 +191,7 @@
         toast(`تم الدفع وأُرسل الطلب #${order.number} للمطبخ`);
       } else { await sendToKitchen(order); toast(`تم إرسال الطلب #${order.number} للمطبخ`); }
       KDS.refresh();
-      if (await confirmBox('طباعة الإيصال؟')) await printReceipt(order, brand);
+      await printReceipt(order, brand); // the receipt prints right after the payment is confirmed
       st.cart = []; st.coupon = null; drawCoupon(); st.notes = ''; st.name = ''; st.phone = ''; st.addr = ''; await loadTables(); drawCart();
     } catch (e) { fail(e); }
   }

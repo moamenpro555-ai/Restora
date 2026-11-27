@@ -16,11 +16,17 @@ function collectPayment(remaining, opts) {
         lines.length > 1 ? h('button', { class: 'btn secondary sm', type: 'button', onclick: () => { lines.splice(i, 1); draw(); upd(); } }, '✕') : null)));
     };
     const info = h('div', { class: 'totals' });
-    const upd = () => { const s = lines.reduce((a, l) => a + (l.amount || 0), 0); clear(info); info.append(h('div', null, h('span', null, 'المطلوب'), h('span', null, money(need))), h('div', { class: 't' }, h('span', null, 'المدخل'), h('span', null, money(s))), h('div', null, h('span', null, 'المتبقي'), h('span', null, money(Math.max(0, need - s))))); ok.disabled = !(s > 0 && s <= need + 0.005); };
+    const upd = () => { const s = lines.reduce((a, l) => a + (l.amount || 0), 0); clear(info); info.append(h('div', null, h('span', null, 'المطلوب'), h('span', null, money(need))), h('div', { class: 't' }, h('span', null, 'المدخل'), h('span', null, money(s))), h('div', null, h('span', null, 'المتبقي'), h('span', null, money(r2(s - need))))); ok.disabled = !(s > 0); }; // المتبقي = المدخل - المطلوب (the change to hand back)
     const extra = opts ? h('div', { class: 'pay-extra' },
       h('label', null, 'ملاحظات على الطلب'),
       h('textarea', { rows: 2, placeholder: 'اختياري', oninput: e => { notes = e.target.value; } }, notes)) : null;
-    const ok = h('button', { class: 'btn ok', onclick: () => { m.close(); const l = lines.filter(x => x.amount > 0); res(opts ? { lines: l, discount, notes: notes.trim() } : l); } }, 'تأكيد الدفع');
+    // If more than the required amount was entered, only the required amount is recorded as paid (the rest is change).
+    const capped = () => {
+      let ex = r2(lines.reduce((a, l) => a + (l.amount || 0), 0) - need); const out = lines.map(x => ({ ...x }));
+      for (let i = out.length - 1; i >= 0 && ex > 0.004; i--) { const cut = Math.min(out[i].amount || 0, ex); out[i].amount = r2(out[i].amount - cut); ex = r2(ex - cut); }
+      return out.filter(x => x.amount > 0);
+    };
+    const ok = h('button', { class: 'btn ok', onclick: () => { m.close(); const l = capped(); res(opts ? { lines: l, discount, notes: notes.trim() } : l); } }, 'تأكيد الدفع');
     const m = modal('تحصيل المبلغ', h('div', null, extra, box, h('button', { class: 'btn secondary sm', type: 'button', onclick: () => { lines.push({ method: 'CARD', amount: 0 }); draw(); } }, '+ تقسيم الدفع'), info, h('div', { class: 'row', style: 'margin-top:12px' }, ok)));
     m.el.addEventListener('click', e => { if (e.target === m.el) res(null); });
     draw(); upd();
@@ -56,7 +62,7 @@ async function printReceipt(order, brand) {
           h('td', { class: 'num' }, n(Number(i.unitPrice) * i.quantity)))))),
       h('div', { class: 'r-sums' },
         row('المجموع الفرعي', n(order.subtotal)),
-        Number(order.discount) ? row('خصم' + (order.couponCode ? ` (${order.couponCode})` : ''), '-' + n(order.discount)) : null,
+        Number(order.discount) ? row('خصم' + (Number(order.subtotal) > 0 ? ` (${+(Number(order.discount) / Number(order.subtotal) * 100).toFixed(2)}%)` : ''), '-' + n(order.discount)) : null,
         Number(order.tax) ? row('الضريبة' + (taxRate ? ` (${taxRate}%)` : ''), n(order.tax)) : null,
         Number(order.deliveryFee) ? row('توصيل', n(order.deliveryFee)) : null),
       h('div', { class: 'r-total' }, h('span', null, 'الإجمالي الكلي'), h('span', null, n(order.total))),
