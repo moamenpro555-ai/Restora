@@ -485,3 +485,6 @@ a.kds-page{display:inline-grid;place-items:center;text-decoration:none;color:var
 .att-tile.on .att-timer{color:#059669}
 .att-sums{display:flex;justify-content:space-between;font-size:.85rem;color:var(--muted)}.att-sums b{color:var(--text)}
 .att-btn{width:100%;justify-content:center;gap:8px}
+
+.modal .totals>div{display:flex;justify-content:space-between;gap:14px;padding:5px 0}
+.modal h3{margin:14px 0 6px}

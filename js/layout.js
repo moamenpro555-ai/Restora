@@ -4,11 +4,11 @@ const NAV = [
   ['tables.html', 'الطاولات', 'tables.manage'], ['reservations.html', 'الحجوزات', 'reservations.manage'],
   ['products.html', 'المنتجات والتصنيفات', 'products.view'], ['inventory.html', 'المخزون والوصفات', 'inventory.manage'],
   ['customers.html', 'العملاء', 'customers.manage'], ['employees.html', 'الموظفون والصلاحيات', 'employees.manage'], ['branches.html', 'الفروع', 'branches.manage'],
-  ['finance.html', 'المالية', 'finance.view'], ['reports.html', 'التقارير', 'reports.view'], ['settings.html', 'الإعدادات والواجهة', 'settings.manage'],
+  ['finance.html', 'المالية', 'finance.view'], ['shifts.html', 'الورديات', 'finance.view'], ['reports.html', 'التقارير', 'reports.view'], ['settings.html', 'الإعدادات والواجهة', 'settings.manage'],
   ['subscriptions.html', 'الاشتراكات', 'subscription.manage'], ['attendance.html', 'الحضور والانصراف', null], ['payroll.html', 'رواتب الموظفين', 'employees.manage'], ['support.html', 'الدعم الفني', null]
 ];
 const NAV_ICON = { 'dashboard.html': 'home', 'pos.html': 'pos', 'orders.html': 'list', 'kitchen.html': 'chef', 'tables.html': 'table', 'reservations.html': 'calendar', 'products.html': 'tag',
-  'inventory.html': 'box', 'customers.html': 'users', 'employees.html': 'shield', 'branches.html': 'store', 'finance.html': 'trend', 'reports.html': 'bars', 'settings.html': 'gear',
+  'inventory.html': 'box', 'customers.html': 'users', 'employees.html': 'shield', 'branches.html': 'store', 'finance.html': 'trend', 'shifts.html': 'clock', 'reports.html': 'bars', 'settings.html': 'gear',
   'subscriptions.html': 'crown', 'attendance.html': 'clock', 'payroll.html': 'wallet', 'support.html': 'support', 'admin.html': 'crown' };
 const ADMIN_NAV = [['admin.html', 'لوحة المنصة', null]];
 let ME = null;
