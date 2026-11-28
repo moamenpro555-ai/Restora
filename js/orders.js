@@ -105,7 +105,7 @@
         selectPill('calendar', [[1, 'اليوم'], [7, 'آخر 7 أيام'], [30, 'آخر 30 يوم'], [0, 'كل الوقت']], days, k => { days = Number(k); page = 1; load(); }))),
     list);
   const sock = connectSocket({ 'order:new': () => { toast('طلب جديد'); soon(); }, 'order:status': soon });
-  setInterval(() => { if (!document.hidden) load(true); }, 20000); // safety net if the socket drops (e.g. the server was asleep)
+  setInterval(() => { if (!document.hidden) load(true); }, 45000); // safety net if the socket drops (e.g. the server was asleep)
   document.addEventListener('visibilitychange', () => { if (!document.hidden) soon(); });
   load();
   if (location.hash.length > 1) details(decodeURIComponent(location.hash.slice(1)));

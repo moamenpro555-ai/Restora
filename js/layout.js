@@ -15,12 +15,13 @@ let ME = null;
 
 async function boot(title, perm, opts = {}) {
   requireLogin();
+  const brandReq = API.get('/settings/branding').catch(() => null); // fired in parallel with /auth/me instead of after it
   try { window.ME = ME = await API.get('/auth/me'); } catch (e) { return null; }
   const isAdmin = ME.kind === 'PLATFORM_ADMIN';
   if (isAdmin !== !!opts.admin) { location.href = isAdmin ? 'admin.html' : 'dashboard.html'; return null; }
   document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light';
   let branding = null;
-  if (!isAdmin) { try { branding = await API.get('/settings/branding'); applyBranding(branding); } catch {} }
+  if (!isAdmin) { try { branding = await brandReq; if (branding) applyBranding(branding); } catch {} }
   document.documentElement.style.setProperty('--font', `'${(branding && branding.fontFamily) || 'Cairo'}','Cairo',system-ui,sans-serif`);
 
   const resOn = !!(ME.tenant && (ME.tenant.modules || {}).reservationsEnabled);

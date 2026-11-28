@@ -67,7 +67,7 @@
       if (box) box.className = 'kt-foot ' + (m > 15 ? 'late' : 'wait');
     }
   }
-  setInterval(tick, 15000); setInterval(load, 20000);
+  setInterval(tick, 15000); setInterval(() => { if (!document.hidden) load(); }, 45000); // the socket pushes changes; this is only a safety net
   const TABS = [['all', 'كل الطلبات', 'utensils'], ['prep', 'قيد التحضير', 'chef'], ['ready', 'جاهز للتقديم', 'checkc'], ...(can('orders.view') ? [['served', 'تم التقديم', 'check']] : [])];
   v.append(pageHead('شاشة المطبخ', 'تابع الطلبات الجارية وحدّث حالتها لحظة بلحظة', 'chef'),
     h('div', { class: 'filters' },

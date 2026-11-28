@@ -10,7 +10,8 @@
   async function loadTables() { if (mods.tables === false) return; try { tables = (await API.get('/tables')).filter(t => t.branchId === st.branchId); } catch { tables = []; } }
   async function loadRegister() { try { register = await API.get('/finance/registers/current' + qs({ branchId: st.branchId })); } catch { register = null; } }
   await Promise.all([loadTables(), loadRegister()]);
-  let bestName = ''; try { const bs = ((await API.get('/reports/dashboard')).bestSellers || [])[0]; if (bs && bs.qty > 0) bestName = bs.name; } catch {}
+  // The "best seller" badge needs the heavy dashboard report, so it loads AFTER the POS is usable instead of blocking it.
+  let bestName = ''; API.get('/reports/dashboard').then(d => { const bs = (d.bestSellers || [])[0]; if (bs && bs.qty > 0) { bestName = bs.name; if (typeof drawProducts === 'function') drawProducts(); } }).catch(() => {});
   let zones = []; try { zones = (await API.get('/delivery-zones')).filter(z => z.isActive); } catch {}
 
   const grid = h('div', { class: 'grid' }), catBar = h('div', { class: 'cats' }), cartBox = h('div', { class: 'cart-wrap' });
